@@ -16,7 +16,7 @@ class Network:
     def __init__(self, layers=None):
         # initialize layers, make it an empty list if no variable is provided
         # layers is all of the layers of nodes in this Network
-        if layers is None or layers is []:
+        if layers is None or layers == []:
             self.layers = []
 
         # if the list contains numbers, initialize each layer to the number of nodes
@@ -53,11 +53,13 @@ class Network:
         for l in self.layers:
             l.random()
 
-    # print a text representation of the network to the console
-    def display(self):
-        print("Network:")
+    # get a text representation of this network
+    def getText(self):
+        s = "Network:\n"
         for l in self.layers:
-            l.display()
+            s += l.getText()
+
+        return s
 
 
 class Layer:
@@ -68,7 +70,7 @@ class Layer:
     def __init__(self, nodes=None):
         # initialize nodes, make it an empty list if no variable is provided
         # nodes is the list of nodes in this layer
-        if nodes is None or nodes is []:
+        if nodes is None or nodes == []:
             self.nodes = []
         # if nodes contains a tuple, then it should contain integers for the number of nodes and connections per node
         elif isinstance(nodes, tuple):
@@ -92,12 +94,12 @@ class Layer:
         for n in self.nodes:
             n.random()
 
-    # print a text representation of the layer to the console
-    def display(self):
-        print("Layer:")
+    # get a text representation of this layer
+    def getText(self):
+        s = "Layer:\n"
         for n in self.nodes:
-            n.display()
-        print()
+            s += n.getText()
+        return s
 
 
 class Node:
@@ -112,7 +114,7 @@ class Node:
 
         # initialize connections, make it an empty list if no variable is provided
         # connections is a list of all the connections feeding into this node
-        if connections is None or connections is []:
+        if connections is None or connections == []:
             self.connections = []
         # if connections is an integer, create a list of connections of that length
         elif isinstance(connections, int):
@@ -145,13 +147,12 @@ class Node:
         for c in self.connections:
             c.random()
 
-    # print a text representation of the node to the console
-    def display(self):
-        print("Node: value: " + str(self.value) + ", bias:" + str(self.bias), end=", ")
+    # get a text representation of this node
+    def getText(self):
+        s = "Node: value: " + str(self.value) + ", bias:" + str(self.bias) + ", "
         for c in self.connections:
-            c.display()
-
-        print()
+            s += c.getText()
+        return s + "\n"
 
 
 class Connection:
@@ -166,9 +167,9 @@ class Connection:
         seed()
         self.weight = random.uniform(-Settings.NET_MAX_WEIGHT, Settings.NET_MAX_WEIGHT)
 
-    # print a text representation of the connection to the console
-    def display(self):
-        print("weight:" + str(self.weight), end=", ")
+    # get a text representation of this connection
+    def getText(self):
+        return "weight:" + str(self.weight) + ", "
 
 
 # get the value of the mathematical function sigmoid for x, return values are always in the range (0, 1)
