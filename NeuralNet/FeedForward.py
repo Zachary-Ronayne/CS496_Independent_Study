@@ -48,6 +48,69 @@ class Network:
         for i in range(len(inputs)):
             self.layers[0].nodes[i].value = inputs[i]
 
+    # uss backpropagation to find the gradient vector for the given layer, using the given expected values, at the
+    #   given layer
+    # returns the final gradient to apply to all weights and biases
+    #   the order is as follows:
+    #       first element is a 2D list of the adjustments that need to be made to the weights feeding to output nodes
+    #       second element is a list of all the adjustments that need to be made to the biases of the output nodes
+    #       continue this with each layer, the input layer shouldn't be effected, it doesn't care about weights
+    # layerI: the number of layers from the output layer to apply the back propagation algorithm
+    # expected: the desired values of the given layer
+    # gradient: the list of values keeping track of the adjustments that should be made to all weights and biases
+    #   should give this an empty list when calling this initially
+    def backpropagate(self, layerI, expected, gradient):
+
+        if layerI == 0:
+            return gradient
+
+        wGradient = []
+        for k in range(self.layers[layerI - 1].size()):
+            wGradient.append([])
+            for j in range(self.layers[layerI].size()):
+                node0 = self.layers[layerI].nodes[j]
+                node1 = self.layers[layerI - 1].nodes[k]
+
+                change = node1.value * dSigmoid(node0.bias + node0.connections[k].weight * node1.value) * \
+                    2 * (node0.value - expected[j])
+
+                wGradient[-1].append(change)
+
+        gradient.append(wGradient)
+
+        bGradient = []
+        for j in range(self.layers[layerI].size()):
+            node0 = self.layers[layerI].nodes[j]
+            total = node0.bias
+            for k in range(self.layers[layerI - 1].size()):
+                total += self.layers[layerI].nodes[j].connections[k].weight * \
+                    self.layers[layerI - 1].nodes[k].value
+            bGradient.append(dSigmoid(total) * 2 * (node0.value - expected[j]))
+
+        gradient.append(bGradient)
+
+        aGradient = []
+        for k in range(self.layers[layerI - 1].size()):
+            total = 0
+            for j in range(self.layers[layerI].size()):
+                w = self.layers[layerI].nodes[j].connections[k].weight
+                total += w * dSigmoid(
+                    self.layers[layerI].nodes[j].bias + self.layers[layerI - 1].nodes[k].value * w
+                ) * 2 * (self.layers[layerI].nodes[j].value - expected[j])
+            aGradient.append(total + self.layers[layerI - 1].nodes[k].value)
+
+        return self.backpropagate(layerI - 1, aGradient, gradient)
+
+    # apply a gradient for backpropagation to this Network, the rules for the gradient are the same as the gradient
+    # returned from backpropagate()
+    def applyGradient(self, gradient):
+        for i in range(len(self.layers) - 1, 1, -1):
+            for j in range(self.layers[i].size()):
+                for k in range(self.layers[i - 1].size()):
+                    self.layers[i].nodes[j].connections[k].weight -= gradient[-i * 2][k][j]
+
+                self.layers[i].nodes[j].bias -= gradient[1 - i * 2][j]
+
     # randomly generate a value for every weight and bias in the Network
     def random(self):
         for l in self.layers:
@@ -175,6 +238,12 @@ class Connection:
 # get the value of the mathematical function sigmoid for x, return values are always in the range (0, 1)
 def sigmoid(x):
     return 1.0 / (1.0 + pow(math.e, -x))
+
+
+# get the value of the derivative of the mathematical function sigmoid for x
+def dSigmoid(x):
+    sig = sigmoid(x)
+    return sig - sig * sig
 
 
 # utility function to seed the random number generator
