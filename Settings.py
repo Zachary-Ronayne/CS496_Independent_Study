@@ -4,10 +4,14 @@
 # Neural network settings
 
 # the absolute value of the maximum value a weight can take on
-NET_MAX_WEIGHT = 10
+NET_MAX_WEIGHT = 2
 
 # the absolute value of the maximum value a bias can take on
-NET_MAX_BIAS = 10
+NET_MAX_BIAS = 2
+
+# the rate at which changes are made in the backpropagation algorithm, larger values mean larger steps
+#   meaning less presice training, but faster training
+NET_PROPAGATION_RATE = 4
 
 
 # Image manipulation settings

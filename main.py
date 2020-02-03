@@ -43,7 +43,7 @@ for c in str(gradient):
 print()
 """
 
-for i in range(1000):
+for i in range(100):
     net.feedInputs(inputs)
     net.calculate()
     gradient = net.backpropagate(2, [.5, .2], [])

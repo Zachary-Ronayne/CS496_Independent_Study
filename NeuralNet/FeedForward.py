@@ -48,7 +48,7 @@ class Network:
         for i in range(len(inputs)):
             self.layers[0].nodes[i].value = inputs[i]
 
-    # uss backpropagation to find the gradient vector for the given layer, using the given expected values, at the
+    # use backpropagation to find the gradient vector for the given layer, using the given expected values, at the
     #   given layer
     # returns the final gradient to apply to all weights and biases
     #   the order is as follows:
@@ -104,12 +104,14 @@ class Network:
     # apply a gradient for backpropagation to this Network, the rules for the gradient are the same as the gradient
     # returned from backpropagate()
     def applyGradient(self, gradient):
-        for i in range(len(self.layers) - 1, 1, -1):
+        for i in range(len(self.layers) - 1, 0, -1):
             for j in range(self.layers[i].size()):
                 for k in range(self.layers[i - 1].size()):
-                    self.layers[i].nodes[j].connections[k].weight -= gradient[-i * 2][k][j]
+                    self.layers[i].nodes[j].connections[k].weight -= \
+                        gradient[-i * 2][k][j] * Settings.NET_PROPAGATION_RATE
 
-                self.layers[i].nodes[j].bias -= gradient[1 - i * 2][j]
+                self.layers[i].nodes[j].bias -= \
+                    gradient[1 - i * 2][j] * Settings.NET_PROPAGATION_RATE
 
     # randomly generate a value for every weight and bias in the Network
     def random(self):
