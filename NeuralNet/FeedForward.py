@@ -66,12 +66,22 @@ class Network:
         if layerI == 0:
             return gradient
 
-        """
-            TODO
-            make list of derivative of sigmoid of the various activation values
-            grab each node object before accessing the same node multiple times
-            see if certain variables should have different names
-        """
+        # find the values of the individual activations going into sigmoid functions, only for this layer
+        # set up variable for activations
+        activations = []
+        # iterate through the previous layer
+        for k in range(self.layers[layerI - 1].size()):
+            # add one more list to the activations list
+            activations.append([])
+            # iterate through the current layer
+            for j in range(self.layers[layerI].size()):
+                # get the node currently being iterated over
+                node0 = self.layers[layerI].nodes[j]
+                # get the node that has the connection from the current iterated connection,
+                #   and where that connection feeds into the currently iterated node
+                node1 = self.layers[layerI - 1].nodes[k]
+                # add the activation
+                activations[-1].append(node0.bias + node0.connections[k].weight * node1.value)
 
         # the list that will contain all the changes made to weights
         wGradient = []
@@ -96,8 +106,7 @@ class Network:
                 #   with respect to the value, the activation, plugged into the sigmoid
                 # the third term is the derivative of the cost function,
                 #   with respect to the output of the sigmoid, the activation
-                change = node1.value * dSigmoid(node0.bias + node0.connections[k].weight * node1.value) * \
-                    2 * (node0.value - expected[j])
+                change = node1.value * dSigmoid(activations[k][j]) * 2 * (node0.value - expected[j])
 
                 # add the change for the weight onto the list of weights, placing it at the end
                 wGradient[-1].append(change)
@@ -111,19 +120,12 @@ class Network:
         for j in range(self.layers[layerI].size()):
             # get the node currently being iterated through
             node0 = self.layers[layerI].nodes[j]
-            # initialize the variable for determining the value going into
-            total = node0.bias
-            # iterate through all the nodes in the previous layer
-            for k in range(self.layers[layerI - 1].size()):
-                # add the activation of the previous layer's node combined with the corresponding weight
-                total += self.layers[layerI].nodes[j].connections[k].weight * \
-                    self.layers[layerI - 1].nodes[k].value
             # add the change in bias value to the bias gradient list
             # this means finding the derivative of the cost function with respect to the bias
             # the first term is not here, because it works out to just 1, having no effect on the derivative
             # the second term is the derivative of the sigmoid with the value feeding into it
             # the third term is the derivative of the cost function with respect to the activation
-            bGradient.append(dSigmoid(total) * 2 * (node0.value - expected[j]))
+            bGradient.append(dSigmoid(node0.activation) * 2 * (node0.value - expected[j]))
 
         # add the bias gradient list to the main gradient list
         gradient.append(bGradient)
@@ -140,16 +142,16 @@ class Network:
             total = 0
             # iterate though all the nodes in the current layer
             for j in range(self.layers[layerI].size()):
+                # get the node of the current layer
+                node = self.layers[layerI].nodes[j]
                 # find the weight of the connection feeding from the previous layer to the current layer
-                w = self.layers[layerI].nodes[j].connections[k].weight
+                w = node.connections[k].weight
                 # find the derivative of the cost function with respect to the activation of the previous layer
                 # the first term is the weight feeding into the current node
                 # the second term is the derivative of the sigmoid with respect to the activation of current layer
                 # the third term is the derivative of the cost function,
                 #   with respect to the activation of the current node
-                total += w * dSigmoid(
-                    self.layers[layerI].nodes[j].bias + w * self.layers[layerI - 1].nodes[k].value
-                ) * 2 * (self.layers[layerI].nodes[j].value - expected[j])
+                total += w * dSigmoid(activations[k][j]) * 2 * (node.value - expected[j])
             # change the total to be the average change in the cost function for all expected nodes
             total /= len(expected)
             # add the value of the change in activation with the actual activation of the node from the previous layer
@@ -178,6 +180,57 @@ class Network:
                 # take the current node and subtract its corresponding change in bias
                 self.layers[i].nodes[j].bias -= \
                     gradient[1 - i * 2][j] * Settings.NET_PROPAGATION_RATE
+
+    # train the network on training data
+    # send a single tuple of two lists for one input, send a list of tuples for multiple pieces of data
+    # the tuple should be of the form (input, expectedOutput)
+    def train(self, trainingData):
+        # if the data is not already a list of lists, put it in a list
+        if isinstance(trainingData, tuple):
+            trainingData = [trainingData]
+
+        # variable to keep track of all the gradient values
+        gradientTotal = []
+
+        # for each piece of data, train on it
+        for data in trainingData:
+            # send the inputs and calculate the data
+            self.feedInputs(data[0])
+            self.calculate()
+            # calculate the gradient
+            gradient = self.backpropagate(len(self.layers) - 1, data[1], [])
+
+            # if the total gradient is empty, then set it to the new gradient
+            if not gradientTotal:
+                gradientTotal = gradient
+            # otherwise, add the new gradient to the total gradient
+            else:
+                # TODO loop this probably needs to be changed to be more efficient, both in terms of time and code
+                for i in range(len(gradientTotal)):
+                    # the even entries are 2D weight lists, need to iterate through all values
+                    if i % 2 == 0:
+                        for j in range(len(gradientTotal[i])):
+                            for k in range(len(gradientTotal[i][j])):
+                                gradientTotal[i][j][k] += gradient[i][j][k]
+                    # the odd entries are a single list, need to iterate through one list
+                    else:
+                        for j in range(len(gradientTotal[i])):
+                            gradientTotal[i][j] += gradient[i][j]
+
+        # take the average values for the gradients
+        for i in range(len(gradientTotal)):
+            # the even entries are 2D weight lists, need to iterate through all values
+            if i % 2 == 0:
+                for j in range(len(gradientTotal[i])):
+                    for k in range(len(gradientTotal[i][j])):
+                        gradientTotal[i][j][k] /= len(trainingData)
+            # the odd entries are a single list, need to iterate through one list
+            else:
+                for j in range(len(gradientTotal[i])):
+                    gradientTotal[i][j] /= len(trainingData)
+
+        # apply the final gradient
+        self.applyGradient(gradientTotal)
 
     # randomly generate a value for every weight and bias in the Network
     def random(self):
@@ -259,14 +312,17 @@ class Node:
         # value is always initialized to 0
         self.value = 0
 
+        # the value of the activation before it's sent into the sigmoid function
+        self.activation = 0
+
     # determine the value of this Node by giving it a layer of nodes. The value is stored in this Node, and returned
     # the number of nodes in layer must be equal to the number of connections in this Node
     def feedLayer(self, layer):
-        self.value = self.bias
+        self.activation = self.bias
         for i in range(layer.size()):
-            self.value += layer.nodes[i].value * self.connections[i].weight
+            self.activation += layer.nodes[i].value * self.connections[i].weight
 
-        self.value = sigmoid(self.value)
+        self.value = sigmoid(self.activation)
 
         return self.value
 
