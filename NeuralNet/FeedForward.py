@@ -205,29 +205,10 @@ class Network:
                 gradientTotal = gradient
             # otherwise, add the new gradient to the total gradient
             else:
-                # TODO loop this probably needs to be changed to be more efficient, both in terms of time and code
-                for i in range(len(gradientTotal)):
-                    # the even entries are 2D weight lists, need to iterate through all values
-                    if i % 2 == 0:
-                        for j in range(len(gradientTotal[i])):
-                            for k in range(len(gradientTotal[i][j])):
-                                gradientTotal[i][j][k] += gradient[i][j][k]
-                    # the odd entries are a single list, need to iterate through one list
-                    else:
-                        for j in range(len(gradientTotal[i])):
-                            gradientTotal[i][j] += gradient[i][j]
+                combineList(gradientTotal, gradient)
 
         # take the average values for the gradients
-        for i in range(len(gradientTotal)):
-            # the even entries are 2D weight lists, need to iterate through all values
-            if i % 2 == 0:
-                for j in range(len(gradientTotal[i])):
-                    for k in range(len(gradientTotal[i][j])):
-                        gradientTotal[i][j][k] /= len(trainingData)
-            # the odd entries are a single list, need to iterate through one list
-            else:
-                for j in range(len(gradientTotal[i])):
-                    gradientTotal[i][j] /= len(trainingData)
+        averageList(gradientTotal, len(trainingData))
 
         # apply the final gradient
         self.applyGradient(gradientTotal)
@@ -373,3 +354,27 @@ def dSigmoid(x):
 # utility function to seed the random number generator
 def seed():
     random.seed(time.time() + random.uniform(0, 1))
+
+
+# utility function for taking the average of all values
+# take all the values in the list
+# if the value is a number, divide it my count
+# if the value is a list, recursively call this method
+def averageList(values, count):
+    for i in range(len(values)):
+        if isinstance(values[i], list):
+            averageList(values[i], count)
+        else:
+            values[i] /= count
+
+
+# utility function to combine numbers in lists of the same size
+# combine the numbers in the lists
+# if the values in list1 are a list, then recursively call this function
+# if the values are a number, combine them from list 2
+def combineList(list1, list2):
+    for i in range(len(list1)):
+        if isinstance(list1[i], list):
+            combineList(list1[i], list2[i])
+        else:
+            list1[i] += list2[i]

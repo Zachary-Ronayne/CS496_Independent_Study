@@ -5,9 +5,10 @@ TODO
 
 Back propagation
 
+Go through back propagation code and make sure it actually works
 Make cohesive pseudo code
 Add test cases for backprogpgate and related methods
-Allow for multiple training examples to be used all at once
+Make test cases for utility methods in FeedForward
 
 
 
@@ -30,50 +31,78 @@ Add a way to create a random neural network from a seed
 
 import NeuralNet.FeedForward as Net
 
+
+PRINT_EXTRA = False
+TRAIN_COUNT = 1000
+
 netSize = [4, 6, 2]
-net = Net.Network(netSize)
-net.random()
 
 data = [
     ([1, 2, 3, 4], [.5, .2]),
-    ([4, 3, 2, 1], [.1, .7]),
+    ([1, 2, 2, 3], [.6, .35]),
+    ([.5, 1, 3, 3], [.8, .4]),
 ]
 
-net.feedInputs(data[0][0])
-net.calculate()
+
+def printData():
+    for i in range(len(data)):
+        if PRINT_EXTRA:
+            print("expected:")
+            print(data[i][1])
+
+        if PRINT_EXTRA:
+            print("raw:")
+        net.feedInputs(data[i][0])
+        net.calculate()
+        outs = net.getOutputs()
+        if PRINT_EXTRA:
+            print(outs)
+
+            print("differences:")
+        diffs = []
+        errors = []
+        for j in range(len(data[i][1])):
+            diffs.append(round(abs(outs[j] - data[i][1][j]), 4))
+            errors.append(round(100 * diffs[j] / outs[j], 4))
+        if PRINT_EXTRA:
+            print(diffs)
+
+        print("% error")
+        s = ""
+        for e in errors:
+            s += str(e) + "% "
+        print(s)
+
+        print()
+
+
+def printGradient(gradient):
+    print("\nGradient:\n")
+    tabs = 0
+    for c in str(gradient):
+        if c == "]":
+            tabs -= 1
+            print()
+            for i in range(tabs):
+                print("\t", end="")
+        elif c == "[":
+            tabs += 1
+            print()
+            for i in range(tabs):
+                print("\t", end="")
+        print(c, end="")
+
+    print()
+
+
+net = Net.Network(netSize)
+net.random()
 
 print("\nBefore:\n")
-print(net.getText())
+printData()
 
-
-"""
-gradient = net.backpropagate(len(netSize) - 1, [.5, .2], [])
-
-print("\nGradient:\n")
-tabs = 0
-for c in str(gradient):
-    if c == "]":
-        tabs -= 1
-        print()
-        for i in range(tabs):
-            print("\t", end="")
-    elif c == "[":
-        tabs += 1
-        print()
-        for i in range(tabs):
-            print("\t", end="")
-    print(c, end="")
-
-print()
-"""
-
-for i in range(100):
+for ii in range(TRAIN_COUNT):
     net.train(data)
 
 print("\nAfter:\n")
-net.feedInputs(data[0][0])
-net.calculate()
-print(net.getOutputs())
-net.feedInputs(data[1][0])
-net.calculate()
-print(net.getOutputs())
+printData()
