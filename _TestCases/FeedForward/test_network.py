@@ -62,6 +62,27 @@ class TestNetwork(TestCase):
             v = net.layers[0].nodes[i].value
             self.assertTrue(v == expect[i], "Input node value should be " + str(expect[i]) + ", was: " + str(v))
 
+    def test_backpropagate(self):
+        net = getTestNet()
+        net.backpropagate(3, [0.5], [])
+
+    def test_applyGradient(self):
+        net = getTestNet()
+        grad = net.backpropagate(3, [0.5], [])
+        net.applyGradient(grad)
+
+    def test_train(self):
+        ex = .5
+        net = getTestNet()
+        out = net.getOutputs()[0]
+        net.train(([.1, .2, .3, .4], [ex]))
+        net.feedInputs([.1, .2, .3, .4])
+        net.calculate()
+        newOut = net.getOutputs()[0]
+        self.assertLess(abs(newOut - ex), abs(out - ex), "After training, the output of the network should be closer"
+                                                         "to the expected value. Expected value: .5,\ninitial value:\t"
+                                                         "" + str(out) + "\nafter training:\t" + str(newOut))
+
     def test_random(self):
         net = Net.Network([2, 3, 4])
         net.random()
@@ -86,3 +107,21 @@ class TestNetwork(TestCase):
                  "Node: value: 0, bias:0, weight:0, weight:0, weight:0, weight:0, \n"
 
         self.assertTrue(s == expect, "Text from network should be:\n" + expect + "was:\n" + s)
+
+
+# a utility method for generating a sample Network for several test cases
+def getTestNet():
+    net = Net.Network([4, 6, 6, 1])
+    for i in range(len(net.layers)):
+        for j in range(len(net.layers[i].nodes)):
+            net.layers[i].nodes[j].bias = j * .1
+
+        if i > 0:
+            for j in range(len(net.layers[i].nodes)):
+                for k in range(len(net.layers[i - 1].nodes)):
+                    net.layers[i].nodes[j].connections[k].weight = (i * .3 + j) * .1
+
+    net.feedInputs([.1, .2, .3, .4])
+    net.calculate()
+
+    return net

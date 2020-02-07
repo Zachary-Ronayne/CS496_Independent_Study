@@ -57,45 +57,39 @@ class Network:
     #       first element is a 2D list of the adjustments that need to be made to the weights feeding to output nodes
     #       second element is a list of all the adjustments that need to be made to the biases of the output nodes
     #       continue this with each layer, the input layer shouldn't be effected, it doesn't care about weights
-    # layerI: the number of layers from the output layer to apply the back propagation algorithm
+    # lay: the number of layers from the output layer to apply the back propagation algorithm
     # expected: the desired values of the given layer
     # gradient: the list of values keeping track of the adjustments that should be made to all weights and biases
     #   should give this an empty list when calling this initially
-    def backpropagate(self, layerI, expected, gradient):
-        # base case, when layerI is 0, that means there are no more layers to propagate through
-        if layerI == 0:
+    def backpropagate(self, lay, expected, gradient):
+        # base case, when lay is 0, that means there are no more layers to propagate through
+        if lay == 0:
             return gradient
 
-        # find the values of the individual activations going into sigmoid functions, only for this layer
         # set up variable for activations
         activations = []
-        # iterate through the previous layer
-        for k in range(self.layers[layerI - 1].size()):
-            # add one more list to the activations list
-            activations.append([])
-            # iterate through the current layer
-            for j in range(self.layers[layerI].size()):
-                # get the node currently being iterated over
-                node0 = self.layers[layerI].nodes[j]
-                # get the node that has the connection from the current iterated connection,
-                #   and where that connection feeds into the currently iterated node
-                node1 = self.layers[layerI - 1].nodes[k]
-                # add the activation
-                activations[-1].append(node0.bias + node0.connections[k].weight * node1.value)
 
         # the list that will contain all the changes made to weights
         wGradient = []
+
         # iterate through the number of connections feeding into the current layer
-        for k in range(self.layers[layerI - 1].size()):
+        # find the change in weights for all values
+        # find the values of the individual activations going into sigmoid functions, only for this layer
+        for k in range(self.layers[lay - 1].size()):
+            # add one list to the activations
+            activations.append([])
             # add one list to the weights
             wGradient.append([])
             # iterate through the number of nodes in the current layer
-            for j in range(self.layers[layerI].size()):
+            for j in range(self.layers[lay].size()):
                 # get the node currently being iterated over
-                node0 = self.layers[layerI].nodes[j]
+                node0 = self.layers[lay].nodes[j]
                 # get the node that has the connection from the current iterated connection,
                 #   and where that connection feeds into the currently iterated node
-                node1 = self.layers[layerI - 1].nodes[k]
+                node1 = self.layers[lay - 1].nodes[k]
+
+                # find the activation value for the current node connection
+                activations[-1].append(node0.bias + node0.connections[k].weight * node1.value)
 
                 # determine change in weight,
                 #   this is the derivative of the cost function with respect to the current connection's weight
@@ -117,15 +111,15 @@ class Network:
         # the list that will contain all the values for all the changes in biases
         bGradient = []
         # iterate through every node in the current layer
-        for j in range(self.layers[layerI].size()):
+        for j in range(self.layers[lay].size()):
             # get the node currently being iterated through
-            node0 = self.layers[layerI].nodes[j]
+            node = self.layers[lay].nodes[j]
             # add the change in bias value to the bias gradient list
             # this means finding the derivative of the cost function with respect to the bias
             # the first term is not here, because it works out to just 1, having no effect on the derivative
             # the second term is the derivative of the sigmoid with the value feeding into it
             # the third term is the derivative of the cost function with respect to the activation
-            bGradient.append(dSigmoid(node0.activation) * 2 * (node0.value - expected[j]))
+            bGradient.append(dSigmoid(node.activation) * 2 * (node.value - expected[j]))
 
         # add the bias gradient list to the main gradient list
         gradient.append(bGradient)
@@ -135,33 +129,33 @@ class Network:
         #   this means the computed value for the derivative will be added to the actual activation
         aGradient = []
         # iterate through all the nodes in the previous layer
-        for k in range(self.layers[layerI - 1].size()):
+        for k in range(self.layers[lay - 1].size()):
             # initialize counter for value fed into the derivative for finding change in activation
             # this doesn't need an initial bias, as it's not finding an activation total,
             #   but the total change to the cost function
             total = 0
             # iterate though all the nodes in the current layer
-            for j in range(self.layers[layerI].size()):
+            for j in range(self.layers[lay].size()):
                 # get the node of the current layer
-                node = self.layers[layerI].nodes[j]
-                # find the weight of the connection feeding from the previous layer to the current layer
-                w = node.connections[k].weight
+                node = self.layers[lay].nodes[j]
                 # find the derivative of the cost function with respect to the activation of the previous layer
                 # the first term is the weight feeding into the current node
                 # the second term is the derivative of the sigmoid with respect to the activation of current layer
                 # the third term is the derivative of the cost function,
                 #   with respect to the activation of the current node
-                total += w * dSigmoid(activations[k][j]) * 2 * (node.value - expected[j])
+                total += node.connections[k].weight * dSigmoid(activations[k][j]) * 2 * (node.value - expected[j])
             # change the total to be the average change in the cost function for all expected nodes
-            total /= len(expected)
-            # add the value of the change in activation with the actual activation of the node from the previous layer
-            aGradient.append(total + self.layers[layerI - 1].nodes[k].value)
+            total /= self.layers[lay].size()
+            # add the value of the change in activation to the list
+            # TODO should this also include the actual value of the node activation and not just the change
+            #   or maybe it should take the original activation and add the change?
+            aGradient.append(total)
 
         # recursively call this algorithm
         # backpropagate on the previous layer,
         #   use the values from the desired activations for the expected values
         #   use the current gradient to ensure that all weight and bias change values are stored in order
-        return self.backpropagate(layerI - 1, aGradient, gradient)
+        return self.backpropagate(lay - 1, aGradient, gradient)
 
     # apply a gradient for backpropagation to this Network, the rules for the gradient are the same as the gradient
     # returned from backpropagate()
@@ -356,7 +350,7 @@ def seed():
     random.seed(time.time() + random.uniform(0, 1))
 
 
-# utility function for taking the average of all values
+# utility function for taking the average of all values by the given count
 # take all the values in the list
 # if the value is a number, divide it my count
 # if the value is a list, recursively call this method

@@ -10,8 +10,8 @@ NET_MAX_WEIGHT = 2
 NET_MAX_BIAS = 2
 
 # the rate at which changes are made in the backpropagation algorithm, larger values mean larger steps
-#   meaning less presice training, but faster training
-NET_PROPAGATION_RATE = 4
+#   meaning less precise training, but faster training
+NET_PROPAGATION_RATE = 1
 
 
 # Image manipulation settings

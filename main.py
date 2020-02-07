@@ -5,10 +5,7 @@ TODO
 
 Back propagation
 
-Go through back propagation code and make sure it actually works
-Make cohesive pseudo code
-Add test cases for backprogpgate and related methods
-Make test cases for utility methods in FeedForward
+Test out code with image data
 
 
 
@@ -33,15 +30,25 @@ import NeuralNet.FeedForward as Net
 
 
 PRINT_EXTRA = False
-TRAIN_COUNT = 1000
+TRAIN_COUNT = 100
 
 netSize = [4, 6, 2]
 
+
 data = [
     ([1, 2, 3, 4], [.5, .2]),
-    ([1, 2, 2, 3], [.6, .35]),
-    ([.5, 1, 3, 3], [.8, .4]),
+    ([.8, 1.6, 2, 3], [.6, .35]),
+    ([.5, 1, 1.8, 2.8], [.8, .4]),
+    ([.2, .8, 1.6, 2], [.85, .43]),
 ]
+"""
+data = [
+    ([.1, .2, .3, .4], [.1, .4]),
+    ([.2, .3, .4, .5], [.2, .5]),
+    ([.3, .4, .5, .6], [.3, .6]),
+    ([.4, .5, .6, .7], [.4, .7]),
+]
+"""
 
 
 def printData():
@@ -72,8 +79,6 @@ def printData():
         for e in errors:
             s += str(e) + "% "
         print(s)
-
-        print()
 
 
 def printGradient(gradient):
