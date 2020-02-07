@@ -48,14 +48,21 @@ imgNet.random()
 
 imgNet.feedInputs(imgData[0])
 imgNet.calculate()
-imgOut = dataToImage(imgNet.getOutputs(), width, height)
-imgOut.save("images/catOut0.png", "PNG")
+# imgOut = dataToImage(imgNet.getOutputs(), width, height)
+# imgOut.save("images/catOut0.png", "PNG")
 
 for i in range(trainCount):
     print("Training " + str(i))
     imgNet.train(imgData)
-    imgOut = dataToImage(imgNet.getOutputs(), width, height)
-    imgOut.save("images/catOut" + str(i + 1) + ".png", "PNG")
+    # imgOut = dataToImage(imgNet.getOutputs(), width, height)
+    # imgOut.save("images/catOut" + str(i + 1) + ".png", "PNG")
+
+img = Image.open("images/cat2.png")
+imgData = imageToData(img, width, height)
+imgNet.feedInputs(imgData[0])
+imgNet.calculate()
+imgOut = dataToImage(imgNet.getOutputs(), width, height)
+imgOut.save("images/cat2Out.png", "PNG")
 
 
 
