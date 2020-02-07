@@ -97,14 +97,14 @@ def scaleImage(width, height, img):
         # the new width is the same as the desired width
         newW = width
         # the new height is based on the desired width and the ratio of the original image
-        newH = int(width * imgH / imgW)
-        space = int((height - newH) * .5)
+        newH = int(round(width * imgH / imgW))
+        space = int(round((height - newH) * .5))
     else:
         # the new width is based on the desired height and the ratio of the original image
-        newW = int(height * imgW / imgH)
+        newW = int(round(height * imgW / imgH))
         # the new height is the same as the desired height
         newH = height
-        space = int((width - newW) * .5)
+        space = int(round((width - newW) * .5))
 
     # resize the image to the desired width and height, maintaining the original aspect ratio
     img = img.resize((newW, newH), Image.CUBIC)

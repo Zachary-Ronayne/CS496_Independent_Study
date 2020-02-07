@@ -17,6 +17,12 @@ Make GUI and commandline program for image manipulation
 
 
 
+Bugs:
+
+Fix issue with overflow when using somewhat large values for sigmoid
+
+
+
 Misc
 
 Add a way to create a random neural network from a seed
@@ -28,7 +34,32 @@ Add a way to create a random neural network from a seed
 
 import NeuralNet.FeedForward as Net
 
+from ImageManip.ImageToData import*
 
+imgName = "cat.png"
+width, height = 50, 50
+trainCount = 40
+
+img = Image.open("images/" + imgName)
+imgData = imageToData(img, width, height)
+
+imgNet = Net.Network([len(imgData[0]), 15, len(imgData[1])])
+imgNet.random()
+
+imgNet.feedInputs(imgData[0])
+imgNet.calculate()
+imgOut = dataToImage(imgNet.getOutputs(), width, height)
+imgOut.save("images/catOut0.png", "PNG")
+
+for i in range(trainCount):
+    print("Training " + str(i))
+    imgNet.train(imgData)
+    imgOut = dataToImage(imgNet.getOutputs(), width, height)
+    imgOut.save("images/catOut" + str(i + 1) + ".png", "PNG")
+
+
+
+#
 PRINT_EXTRA = False
 TRAIN_COUNT = 100
 
@@ -51,7 +82,7 @@ data = [
 """
 
 
-def printData():
+def printData(net):
     for i in range(len(data)):
         if PRINT_EXTRA:
             print("expected:")
@@ -100,14 +131,15 @@ def printGradient(gradient):
     print()
 
 
-net = Net.Network(netSize)
-net.random()
+def testTraining():
+    net = Net.Network(netSize)
+    net.random()
 
-print("\nBefore:\n")
-printData()
+    print("\nBefore:\n")
+    printData(net)
 
-for ii in range(TRAIN_COUNT):
-    net.train(data)
+    for ii in range(TRAIN_COUNT):
+        net.train(data)
 
-print("\nAfter:\n")
-printData()
+    print("\nAfter:\n")
+    printData(net)
