@@ -1526,3 +1526,5 @@ venv/Scripts/pip3.exe
 venv/Scripts/python.exe
 venv/Scripts/pythonw.exe
 .idea/vcs.xml
+saves/test.txt
+images/training.mov
