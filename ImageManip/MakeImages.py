@@ -5,10 +5,14 @@ import cv2
 
 from PIL import Image
 
+import numpy as np
+
 from os import listdir, mkdir
 from os.path import isfile, join, isdir
 
 import Settings
+
+from ImageManip.TrainingData import *
 
 
 # load in a folder of images, then convert them all to .png images and store them in a new folder
@@ -50,55 +54,99 @@ def imagesToPng(imageLoc):
 # the images are stored in a folder in the same location as the videoPath, the folder is called (videoName + "_split")
 # videoPath: the folder with the video file, will be relative to images
 # videoName: the name of the video file, excluding file extention, must be .mov
-def videoToImages(videoPath, videoName):
-    # determine the folder path
-    videoPath = "images/" + videoPath + ""
-    splitPath = videoPath + videoName + "_split"
+# size: a tuple with the width and height to resize the images to, don't include to not modify the size
+# skip: skip every this many frames, default 1, meaning skip no frames
+# start: the percentage in range [0, 1] of the starting point in the video to produce images, must be < end
+# end: the percentage in range [0, 1] of th end point in the video tp produce images, must be > start
+#   can also use integers for start and end along with the flag frameRange set to true to use a range of frames for
+#   start and end
+def videoToImages(videoPath, videoName, size=None, skip=1, start=0, end=1, frameRange=False):
+    # determine the folder pat
+    splitPath = "images/" + videoPath + videoName + "_split"
 
     # if the directory doesn't exist, make one
     if not isdir(splitPath):
         mkdir(splitPath)
 
-    video = cv2.VideoCapture(videoPath + videoName + ".mov")
+    # get the image files
+    images = videoToPillowImages(videoPath, videoName, size, skip, start, end, frameRange)
 
-    success, img = video.read()
-    cnt = 0
-    while success:
-        num = str(cnt)
+    # go through each image and save them
+    for i, img in enumerate(images):
+        # determine the number for the file name of the image
+        num = str(i)
         while len(num) < Settings.IMG_NUM_DIGITS:
             num = "0" + num
 
+        # determine the name of the file
         frameName = splitPath + "/img" + num + ".png"
-        cv2.imwrite(frameName, img)
+        # write the file
+        cv2.imwrite(frameName, np.array(img))
+        # print that the frame was saved, if applicable
         if Settings.IMG_PRINT_STATUS:
             print("saved frame: " + frameName)
-
-        cnt += 1
-        success, img = video.read()
 
 
 # get a list of Pillow images from a video file
 # videoPath: the folder with the video file, will be relative to images
 # videoName: the name of the video file, excluding file extention, must be .mov
 # returns: a list of all the images
-def videoToPillowImages(videoPath, videoName):
+# size: a tuple with the width and height to resize the images to, don't include to not modify the size
+# skip: skip every this many frames, default 1, meaning skip no frames
+# start: the percentage in range [0, 1] of the starting point in the video to produce images, must be < end
+# end: the percentage in range [0, 1] of th end point in the video tp produce images, must be > start
+#   can also use integers for start and end along with the flag frameRange set to true to use a range of frames for
+#   start and end
+def videoToPillowImages(videoPath, videoName, size=None, skip=1, start=0, end=1, frameRange=False):
     # determine the folder path
     videoPath = "images/" + videoPath
+    filePath = videoPath + videoName + ".mov"
 
-    video = cv2.VideoCapture(videoPath + videoName + ".mov")
+    # load in the video file
+    video = cv2.VideoCapture(filePath)
 
+    # load the first frame to ensure that the video loaded correctly
     success, img = video.read()
     if not success:
         print("failed to load video file " + videoName + " at " + videoPath)
+        return None
 
-    cnt = 0
+    # set up variables for loop
+    cnt = 1
     images = []
 
-    while success:
-        images.append(Image.fromarray(img))
-        if Settings.IMG_PRINT_STATUS:
-            print("loaded image " + str(cnt) + " " + str(images[-1]))
+    # find the total number of frames
+    frameTotal = video.get(cv2.CAP_PROP_FRAME_COUNT)
 
+    # continue until the video can no longer load a frame
+    while success:
+        # determine the position for comparison to see if this frame is in the range of the video
+        if frameRange:
+            pos = cnt
+        else:
+            pos = cnt / frameTotal
+            # if this frame is in the range of the video, and shouldn't be skipped
+        if cnt % skip == 0 and start <= pos <= end:
+            # convert the image array to a PIL image
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+            img = Image.fromarray(img)
+
+            # if resizing should be done, then do so
+            if size is not None:
+                img = scaleImage(size[0], size[1], img)
+
+            # add the image to the list
+            images.append(img)
+
+            # print information about loading the image, if applicable
+            if Settings.IMG_PRINT_STATUS:
+                print("loaded image " + str(cnt) + " " + str(images[-1]))
+
+        # if the end of the range has been reached, end the loop
+        if pos > end:
+            break
+
+        # increment the frame counter and load the next frame
         cnt += 1
         success, img = video.read()
 

@@ -147,8 +147,6 @@ class Network:
             # change the total to be the average change in the cost function for all expected nodes
             total /= self.layers[lay].size()
             # add the value of the change in activation to the list
-            # TODO should this also include the actual value of the node activation and not just the change
-            #   or maybe it should take the original activation and add the change?
             aGradient.append(total)
 
         # recursively call this algorithm
@@ -220,6 +218,30 @@ class Network:
 
         return s
 
+    # save this Network with the given file name relative to the saves folder
+    def save(self, name):
+        # open the file
+        with open("saves/" + name + ".txt", "w") as f:
+            # save the number of layers
+            f.write(str(len(self.layers)) + "\n")
+
+            # save each layer
+            for l in self.layers:
+                l.save(f)
+
+    # load this Network with the given file name relative to the saves folder
+    def load(self, name):
+        # open the file
+        with open("saves/" + name + ".txt", "r") as f:
+            # get the number of layers
+            size = int(f.readline())
+            self.layers = []
+            # load each layer
+            for i in range(size):
+                lay = Layer()
+                lay.load(f)
+                self.layers.append(lay)
+
 
 class Layer:
 
@@ -259,6 +281,25 @@ class Layer:
         for n in self.nodes:
             s += n.getText()
         return s
+
+    # save this Layer to the given file IO object in write mode
+    def save(self, f):
+        # save the number of nodes
+        f.write(str(self.size()) + "\n")
+        # save each node
+        for n in self.nodes:
+            n.save(f)
+
+    # load this Layer with the given file IO object in read mode
+    def load(self, f):
+        # load the number of nodes
+        size = int(f.readline())
+        self.nodes = []
+        # load each node
+        for i in range(size):
+            n = Node()
+            n.load(f)
+            self.nodes.append(n)
 
 
 class Node:
@@ -316,11 +357,44 @@ class Node:
             s += c.getText()
         return s + "\n"
 
+    # save this Node to the given file IO object in write mode
+    def save(self, f):
+        # save data about the node
+        f.write(str(len(self.connections)) + " " + str(self.bias) + " " + str(self.value)
+                + " " + str(self.activation) + "\n")
+        # save each connection
+        for c in self.connections:
+            c.save(f)
+        # if at least one connection was saved, make a new line
+        if len(self.connections) > 0:
+            f.write("\n")
+
+    # load this node with the given file IO object in read mode
+    def load(self, f):
+        # load the first line containing data about this node
+        line = f.readline().split(' ')
+        size = int(line[0])
+        self.bias = float(line[1])
+        self.value = float(line[2])
+        self.activation = float(line[3])
+
+        self.connections = []
+
+        # if there is at least one connection load in all connections
+        if size > 0:
+            # load the line containing connection values
+            line = f.readline().split(' ')
+
+            # load each connection
+            for i in range(size):
+                c = Connection(float(line[i]))
+                self.connections.append(c)
+
 
 class Connection:
 
     # weight: the weight value of this connection
-    def __init__(self, weight=0):
+    def __init__(self, weight=0.0):
         # initialize weight, the weight of this connection combined with the values of previous nodes
         self.weight = weight
 
@@ -332,6 +406,11 @@ class Connection:
     # get a text representation of this connection
     def getText(self):
         return "weight:" + str(self.weight) + ", "
+
+    # save this Connection to the given file IO object in write mode
+    def save(self, f):
+        # save the weight of this connection3
+        f.write(str(self.weight) + " ")
 
 
 # get the value of the mathematical function sigmoid for x, return values are always in the range (0, 1)

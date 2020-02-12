@@ -2,6 +2,8 @@ from unittest import TestCase
 import NeuralNet.FeedForward as Net
 import _TestCases.FeedForward.test_connection as TestCon
 
+import os
+
 
 class TestNode(TestCase):
     def test_init(self):
@@ -47,6 +49,36 @@ class TestNode(TestCase):
         s = n.getText()
         expect = "Node: value: 2.5, bias:1.1, weight:1.3, weight:-2.2, \n"
         self.assertTrue(s == expect, "Text of node should be \n\"" + expect + "\" was \n\"" + s + "\"")
+
+    def test_save(self):
+        n = Net.Node(bias=2.1, connections=[Net.Connection(1), Net.Connection(-.5)])
+        n.value = .3
+        n.activation = .2
+        with open("nodeSaveTest.txt", "w") as f:
+            n.save(f)
+
+        loadN = Net.Node()
+        with open("nodeSaveTest.txt", "r") as f:
+            loadN.load(f)
+
+        self.assertEqual(n.value, loadN.value, "After saving and loading this node, the value should be .3 was: " +
+                         str(loadN.value))
+        self.assertEqual(n.activation, loadN.activation, "After saving and loading this node,"
+                                                         "the activation should be .2 was: " +
+                         str(loadN.activation))
+        self.assertEqual(n.bias, loadN.bias, "After saving and loading this node, the bias should be .2 was: " +
+                         str(loadN.bias))
+        self.assertEqual(len(loadN.connections), 2, "After saving and loading this node,"
+                                                    "there should be 2 connections, found: " +
+                         str(len(loadN.connections)))
+        self.assertEqual(loadN.connections[0].weight, 1, "After saving and loading this node,"
+                                                         "the first connection should be 1, was: " +
+                         str(loadN.connections[0].weight))
+        self.assertEqual(loadN.connections[1].weight, -.5, "After saving and loading this node,"
+                                                           "the second connection should be -.5, was: " +
+                         str(loadN.connections[1].weight))
+
+        os.remove("nodeSaveTest.txt")
 
 
 def testRandom(test, node):

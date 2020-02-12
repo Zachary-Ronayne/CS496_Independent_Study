@@ -1,6 +1,8 @@
 from unittest import TestCase
 import NeuralNet.FeedForward as Net
 
+import os
+
 
 class TestConnection(TestCase):
 
@@ -19,6 +21,19 @@ class TestConnection(TestCase):
         c = Net.Connection(-2.1)
         s = c.getText()
         self.assertTrue(s == "weight:-2.1, ", "Incorrect formatting for text of connection, \"" + s + "\"")
+
+    def test_save(self):
+        c = Net.Connection(2.1)
+        with open("connectionSaveTest.txt", "w") as f:
+            c.save(f)
+
+        with open("connectionSaveTest.txt", "r") as f:
+            value = float(f.readline())
+
+        self.assertEqual(value, c.weight, "After saving and loading this connection, the weight should be 2.1, was: " +
+                         str(value))
+
+        os.remove("connectionSaveTest.txt")
 
 
 def testRandom(test, con):

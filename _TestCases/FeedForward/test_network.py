@@ -2,6 +2,8 @@ from unittest import TestCase
 import NeuralNet.FeedForward as Net
 import _TestCases.FeedForward.test_layer as TestLayer
 
+import os
+
 
 class TestNetwork(TestCase):
     def test_init(self):
@@ -98,15 +100,41 @@ class TestNetwork(TestCase):
                  "Node: value: 0, bias:0, \n" \
                  "Node: value: 0, bias:0, \n" \
                  "Layer:\n" \
-                 "Node: value: 0, bias:0, weight:0, weight:0, weight:0, \n" \
-                 "Node: value: 0, bias:0, weight:0, weight:0, weight:0, \n" \
-                 "Node: value: 0, bias:0, weight:0, weight:0, weight:0, \n" \
-                 "Node: value: 0, bias:0, weight:0, weight:0, weight:0, \n" \
+                 "Node: value: 0, bias:0, weight:0.0, weight:0.0, weight:0.0, \n" \
+                 "Node: value: 0, bias:0, weight:0.0, weight:0.0, weight:0.0, \n" \
+                 "Node: value: 0, bias:0, weight:0.0, weight:0.0, weight:0.0, \n" \
+                 "Node: value: 0, bias:0, weight:0.0, weight:0.0, weight:0.0, \n" \
                  "Layer:\n" \
-                 "Node: value: 0, bias:0, weight:0, weight:0, weight:0, weight:0, \n" \
-                 "Node: value: 0, bias:0, weight:0, weight:0, weight:0, weight:0, \n"
+                 "Node: value: 0, bias:0, weight:0.0, weight:0.0, weight:0.0, weight:0.0, \n" \
+                 "Node: value: 0, bias:0, weight:0.0, weight:0.0, weight:0.0, weight:0.0, \n"
 
         self.assertTrue(s == expect, "Text from network should be:\n" + expect + "was:\n" + s)
+
+    def test_save(self):
+        net = Net.Network([2, 3, 4])
+        net.random()
+
+        os.chdir("..")
+        os.chdir("..")
+
+        net.save("networkSaveTest")
+
+        netLoad = Net.Network()
+        netLoad.load("networkSaveTest")
+
+        for l, lay in enumerate(net.layers):
+            for n, nd in enumerate(lay.nodes):
+                self.assertEqual(nd.value, netLoad.layers[l].nodes[n].value,
+                                 "Value of a node should match after loading network")
+                self.assertEqual(nd.activation, netLoad.layers[l].nodes[n].activation,
+                                 "Activation of a node should match after loading network")
+                self.assertEqual(nd.bias, netLoad.layers[l].nodes[n].bias,
+                                 "Bias of a node should match after loading network")
+                for c, con in enumerate(nd.connections):
+                    self.assertEqual(con.weight, netLoad.layers[l].nodes[n].connections[c].weight,
+                                     "Weight of a connection should match after loading network")
+
+        os.remove("saves/networkSaveTest.txt")
 
 
 # a utility method for generating a sample Network for several test cases
