@@ -451,3 +451,14 @@ def combineList(list1, list2):
             combineList(list1[i], list2[i])
         else:
             list1[i] += list2[i]
+
+
+# create and return a Network made for taking input and output images of the specified size
+# width: the width of the images the Network should handle
+# height: the height of the images the Network should handle
+# hidden: the list of numbers of nodes in hidden layers
+def makeImageNetwork(width, height, hidden):
+    hidden.insert(0, width * height)
+    hidden.append(width * height * 3)
+
+    return Network(hidden)

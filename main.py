@@ -5,29 +5,33 @@ TODO
 
 Back propagation
 
-Test out code with image data
+Investigate methods, make sure they line up with mathematical models
+
 
 
 
 Network
 
-Add a way of splitting a list of data into separate data groups for training batches
-Make a convenient way to load two separate folders of image data into a training data set object
-Make method for setting up Network based on width and height of images
+Make a class extending Network, specifically with extra functionality for processing images and saving things
+    like height and width
+
 
 
 
 
 Image manipulation
 
-Make java program for making random images of the color squares to use as training data
+Make program for making random images of the color squares to use as training data
 Make GUI and commandline program for image manipulation
+Add option to TrainingData.scaleImage for resizing based on adding black bars, or stretching
 
 
 
 Bugs:
 
 Fix issue with overflow when using somewhat large values for sigmoid
+Sometimes when images are loaded in MakeImages.videoToPillowImages, they are in the wrong color format,
+    need to figure out places where it needs to be converted
 
 
 
@@ -41,102 +45,24 @@ Add a way to create a random neural network from a seed
 
 
 import NeuralNet.FeedForward as Net
-from ImageManip.MakeImages import *
 from ImageManip.TrainingData import *
 
-import random
 
-"""
-vidNet = Net.Network([10, 5, 4, 3])
-vidNet.random()
-vidNet.feedInputs([.1, .15, .2, .25, .3, .35, .4, .45, .5, .54])
-vidNet.calculate()
-# vidNet.save("test")
-vidNet.load("test")
-print(vidNet.getText())
-
-"""
-imgData = []
 width = 32
 height = 18
+trainCount = 20
 
-imgs = videoToPillowImages("", "training", size=(width, height), skip=1)
+# vidData = splitVideoToFolders("", "training", (width, height), skip=30, start=0, end=300, frameRange=True)
+vidData = dataFromFolders("training (train_data)/")
 
-for i, im in enumerate(imgs):
-    resize = scaleImage(width, height, im)
+# vidNet = Net.makeImageNetwork(width, height, [20, 20])
+# vidNet.random()
+vidNet = Net.Network()
+vidNet.load("vidNet")
 
-    imgData.append(imageToData(resize, width, height))
-    print("Making data from: " + str(i) + " " + str(resize))
+afterPath = "images/after/"
+processFromFolder(vidNet, "training (train_data)/grayInput/", afterPath, width, height)
 
-
-vidNet = Net.Network([len(imgData[0][0]), 20, 20, len(imgData[0][1])])
-vidNet.random()
-
-
-for i in range(30):
-    print("Started training " + str(i))
-    random.shuffle(imgData)
-    vidNet.train(imgData)
-
-for i, img in enumerate(imgData):
-    vidNet.feedInputs(img[0])
-    vidNet.calculate()
-    outImg = dataToImage(vidNet.getOutputs(), width, height)
-    outImg.save("images/trainOut" + str(i) + ".png", "PNG")
-    print("saved frame " + str(i))
-
-
-
-"""
-outImg = convertGrayScale(dataToImage(imgData[0][1], width, height))
-outImg.save("images/trainGray.png", "PNG")
-
-outImg = imgs[0]
-outImg.save("images/trainColor.png", "PNG")
-
-
-
-for i, im in enumerate(imgData):
-    vidNet.train(im)
-
-    vidNet.feedInputs(imgData[0][0])
-    vidNet.calculate()
-    outImg = dataToImage(vidNet.getOutputs(), width, height)
-    outImg.save("images/trainOut" + str(i) + ".png", "PNG")
-    print("trained time " + str(i))
-
-"""
-
-
-"""
-imgName = "cat.png"
-width, height = 50, 50
-trainCount = 40
-
-img = Image.open("images/" + imgName)
-imgData = imageToData(img, width, height)
-
-imgNet = Net.Network([len(imgData[0]), 15, len(imgData[1])])
-imgNet.random()
-
-imgNet.feedInputs(imgData[0])
-imgNet.calculate()
-# imgOut = dataToImage(imgNet.getOutputs(), width, height)
-# imgOut.save("images/catOut0.png", "PNG")
-
-for i in range(trainCount):
-    print("Training " + str(i))
-    imgNet.train(imgData)
-    # imgOut = dataToImage(imgNet.getOutputs(), width, height)
-    # imgOut.save("images/catOut" + str(i + 1) + ".png", "PNG")
-
-img = Image.open("images/cat2.png")
-imgData = imageToData(img, width, height)
-imgNet.feedInputs(imgData[0])
-imgNet.calculate()
-imgOut = dataToImage(imgNet.getOutputs(), width, height)
-imgOut.save("images/cat2Out.png", "PNG")
-"""
 
 #
 PRINT_EXTRA = False
@@ -151,14 +77,6 @@ data = [
     ([.5, 1, 1.8, 2.8], [.8, .4]),
     ([.2, .8, 1.6, 2], [.85, .43]),
 ]
-"""
-data = [
-    ([.1, .2, .3, .4], [.1, .4]),
-    ([.2, .3, .4, .5], [.2, .5]),
-    ([.3, .4, .5, .6], [.3, .6]),
-    ([.4, .5, .6, .7], [.4, .7]),
-]
-"""
 
 
 def printData(net):

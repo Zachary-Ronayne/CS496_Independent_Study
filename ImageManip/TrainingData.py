@@ -1,11 +1,9 @@
-from PIL import Image
-from os import listdir, mkdir
-from os.path import isfile, join, isdir
+from ImageManip.MakeImages import *
 
-import Settings
+import shutil
 
 
-# take all the images in a folder and generate training data for all images
+# take all the images in a folder and generate training data images for all images in the given source
 # the data is split into two folders, one is the gray scale input, in a folder called grayInput
 # the other is the colored expected output in a folder called colorOutput
 # all images will be the same aspect ratio as the originals, adding black bars to the sides or top
@@ -18,7 +16,7 @@ import Settings
 #   or
 #   a list of Pillow images to convert
 # folder: the folder to save the images to, relative to images
-def createTrainingData(width, height, source, folder):
+def folderToInOutImages(width, height, source, folder):
     # direct the folder to the images folder
     folder = "images/" + folder + "/"
 
@@ -70,82 +68,109 @@ def createTrainingData(width, height, source, folder):
         cnt += 1
 
 
-# take the given PIL image and convert it to be resized to the given width and height, adding black
-# bars to the sides or top and bottom if necessary to keep the same aspect ratio
-# width: the number of pixels to resize the width of img to, must be a positive integer > 0
-# height: the number of pixels to resize the height of img to, must be a positive integer > 0
-# img: the image to convert, must be in RBG mode
-def scaleImage(width, height, img):
+# get a list of training data from a folder with the format created by trainingDataFromFolder
+# the folder should contain a folder called grayInput for the input images,
+#   and a folder called colorOutput for the expected output
+# both the folders should contain the exact same number of images, all of which are formatted
+#   correctly for training data
+# the images in the folders should only contain the training data and no other folders or files
+# path: the path to the two folders, relative to images
+def dataFromFolders(path):
+    # determine folder paths
+    path = "images/" + path
+    grayPath = path + "grayInput/"
+    colorPath = path + "colorOutput/"
 
-    # create a black background
-    background = Image.new("RGB", (width, height), color=(0, 0, 0))
+    # load in gray images
+    grayImg = [f for f in listdir(grayPath)]
+    for i in range(len(grayImg)):
+        grayImg[i] = Image.open(grayPath + grayImg[i])
 
-    # set the alpha channels of both images
-    background.putalpha(255)
-    img.putalpha(255)
+    # load in color images
+    colorImg = [f for f in listdir(colorPath)]
+    for i in range(len(colorImg)):
+        colorImg[i] = Image.open(colorPath + colorImg[i])
 
-    # get the size of the given image
-    imgW, imgH = img.size
+    data = []
 
-    # find the ratios of the width and height to determine where black bars go
-    wRatio = imgW / width
-    hRatio = imgH / height
+    # add all the data tuples into the data list
+    for i, img in enumerate(grayImg):
+        data.append((grayImageToData(img), colorImageToData(colorImg[i])))
 
-    # if the width is bigger, the black bars go on the top and bottom, otherwise the sides
-    bigWidth = wRatio > hRatio
-    if bigWidth:
-        # the new width is the same as the desired width
-        newW = width
-        # the new height is based on the desired width and the ratio of the original image
-        newH = int(round(width * imgH / imgW))
-        space = int(round((height - newH) * .5))
-    else:
-        # the new width is based on the desired height and the ratio of the original image
-        newW = int(round(height * imgW / imgH))
-        # the new height is the same as the desired height
-        newH = height
-        space = int(round((width - newW) * .5))
-
-    # resize the image to the desired width and height, maintaining the original aspect ratio
-    img = img.resize((newW, newH), Image.CUBIC)
-
-    # determine the bounds of where the resized image should be pasted based on black par positions
-    if bigWidth:
-        # black bars on the top and bottom
-        bounds = (0, space, width, height - space)
-    else:
-        # black bars on the sides
-        bounds = (space, 0, width - space, height)
-
-    # paste the image
-    background.paste(img, bounds)
-
-    # return the resized image with black bars
-    return background
+    return data
 
 
-# convert the given PIL image to gray scale and returns it
-# img: the image to convert, must be in RBG mode
-def convertGrayScale(img):
-    # TODO a note, may want to find a way to avoid using putpixel() if performance suffers
+# take the video file at the given path and create a folder of images for input data,
+#   and a folder of images for output data
+# also returns the training data as a tuple
+# path: the folder path containing the video file, relative to images
+# name: the file name of the video, excluding file extension, must be .mov
+# see MakeImages.videoToImages for extra parameters description
+def splitVideoToInOutImages(path, name, size=None, skip=1, start=0, end=1, frameRange=False):
+    # create a folder with each frame of the video, and store the path
+    splitPath = splitVideo(path, name, size, skip, start, end, frameRange)
+    # determine the new path name for where each folder will be saved
+    trainingDataPath = path + name + " (train_data)/"
 
-    # get the size of the image
-    width, height = img.size
+    # make a directory for the new folder
+    if not isdir("images/" + trainingDataPath):
+        mkdir("images/" + trainingDataPath)
 
-    # for each pixel, turn it to gray scales
-    for i in range(width):
-        for j in range(height):
-            # get the pixel value
-            pix = img.getpixel((i, j))
-            # calculate the gray scale value
-            gray = int(.3 * pix[0] + .59 * pix[1] + .11 * pix[2])
-            # set the pixel value to the gray scale value
-            img.putpixel((i, j), (gray, gray, gray))
+    # get training data from the split frames and convert them to images
+    folderToInOutImages(size[0], size[1], splitPath, trainingDataPath)
 
-    return img
+    # delete the folder from the initial video file split
+    shutil.rmtree(splitPath)
+
+    # generate the data from the newly created images
+    return dataFromFolders(trainingDataPath)
 
 
-# take a PIL image, and return a tuple of input and output data for a Network
+# train the given Network on the images in the given path
+# net: the Network that will be trained
+# path: the path, relative to images, containing the two folders for input and output data, grayInput and colorInput
+# times: number of times to train on the data
+def trainOnFolder(net, path, times=1):
+    # get the data
+    data = dataFromFolders(path)
+
+    # train on the given data the specified number of times
+    for i in range(times):
+        net.train(data)
+
+
+# using the given Network, calculate and save images for each image in the given path
+# net: the Network to process the images
+# path: a folder, relative to images, of the gray scale images to use for input
+# outPath: a folder, relative to images, to where each image should be saved
+# width: the width of the images that the Network processes
+# height: the height of the images that the Network processes
+def processFromFolder(net, path, outPath, width, height):
+    # load in all gray scale images
+    path = "images/" + path
+    data = [f for f in listdir(path)]
+    for i in range(len(data)):
+        # load image
+        data[i] = Image.open(path + data[i])
+
+        # resize appropriately
+        data[i] = scaleImage(width, height, data[i])
+
+        # convert to data
+        data[i] = grayImageToData(data[i])
+
+    # determine and save all images
+    for i, d in enumerate(data):
+        # determine the output of the Network with the current image
+        net.feedInputs(d)
+        net.calculate()
+        # get the output data of the Network
+        img = dataToImage(net.getOutputs(), width, height)
+        # save the output data as an image
+        img.save(outPath + "output " + str(i) + ".png", "PNG")
+
+
+# take a PIL image and return a tuple of input and output data for an image Neural Network
 # the first element is the input data, the second element is the expect output
 # img: the PIL image to process
 # width: the desired with of the resized version of the image
@@ -154,26 +179,45 @@ def imageToData(img, width, height):
     # create the reszied color image
     color = scaleImage(width, height, img)
     # add all the color values to the expected output data
-    exData = []
-    pixels = color.load()
-    for x in range(width):
-        for y in range(height):
-            p = pixels[x, y]
-            exData.append(p[0] / 256.0)
-            exData.append(p[1] / 256.0)
-            exData.append(p[2] / 256.0)
+    exData = colorImageToData(color)
 
     # create the gray scale version of the color image
     gray = convertGrayScale(color)
     # add all the color values to the input data
-    inData = []
-    pixels = gray.load()
+    inData = grayImageToData(gray)
+    return inData, exData
+
+
+# take a color PIL image and convert it to expected output training data
+def colorImageToData(img):
+    exData = []
+    # get the pixels
+    pixels = img.load()
+    width, height = img.size
+    # go through each pixel and add the data for each color channel
     for x in range(width):
         for y in range(height):
+            for c in range(3):
+                exData.append(pixels[x, y][c] / 256.0)
+
+    return exData
+
+
+# take a gray scale PIL image and convert it to input training data
+# this method assumes all 3 color channels have the same value
+def grayImageToData(img):
+    inData = []
+    # get the pixels
+    pixels = img.load()
+    width, height = img.size
+    # go through each pixel and add the data for the gray
+    for x in range(width):
+        for y in range(height):
+            # assume all channels are the same value, so just take the red value
             inData.append(pixels[x, y][0] / 256.0)
 
     # return the input data
-    return inData, exData
+    return inData
 
 
 # get a PIL image from the given list of data
@@ -182,9 +226,11 @@ def imageToData(img, width, height):
 # width: the number of pixels in a row
 # height: the number of pixels in a column
 def dataToImage(data, width, height):
+    # make a new image of the correct size
     img = Image.new("RGB", (width, height))
 
     cnt = 0
+    # go through each pixel and set each color channel based on the data in the list
     for x in range(width):
         for y in range(height):
             img.putpixel((x, y),
@@ -196,3 +242,22 @@ def dataToImage(data, width, height):
             cnt += 3
 
     return img
+
+
+# take a single list of data and divide it into lists of equal size
+# data: the list of items to separate
+# size: the number of elements that should be in each sub list, any elements that don't fit evenly will be placed in
+#   one list smaller than the rest of the lists
+def dataSubSet(data, size):
+    retData = []
+
+    # go through the list of data in increments of the size of list divisions
+    for i in range(0, len(data), size):
+        end = i + size
+        # if the new index for the next section is outside the list range, then set the end index to the end of the list
+        if end > len(data) - 1:
+            end = len(data)
+        # add the next section of the original list
+        retData.append(data[i:end])
+
+    return retData
