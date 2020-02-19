@@ -6,6 +6,8 @@ import math
 import time
 import random
 
+import numpy as np
+
 
 class Network:
 
@@ -102,6 +104,14 @@ class Network:
                 #   with respect to the output of the sigmoid, the activation
                 change = node1.value * dSigmoid(activations[k][j]) * 2 * (node0.value - expected[j])
 
+                # TODO this?
+                """
+                if change > 0:
+                    change = .01
+                elif change < 0:
+                    change = -.01
+                """
+
                 # add the change for the weight onto the list of weights, placing it at the end
                 wGradient[-1].append(change)
 
@@ -119,7 +129,20 @@ class Network:
             # the first term is not here, because it works out to just 1, having no effect on the derivative
             # the second term is the derivative of the sigmoid with the value feeding into it
             # the third term is the derivative of the cost function with respect to the activation
-            bGradient.append(dSigmoid(node.activation) * 2 * (node.value - expected[j]))
+
+            # calculate the change
+            change = dSigmoid(node.activation) * 2 * (node.value - expected[j])
+
+            # TODO this?
+            """
+            if change > 0:
+                change = .01
+            elif change < 0:
+                change = -.01
+            """
+
+            # add the change value
+            bGradient.append(change)
 
         # add the bias gradient list to the main gradient list
         gradient.append(bGradient)
@@ -415,7 +438,7 @@ class Connection:
 
 # get the value of the mathematical function sigmoid for x, return values are always in the range (0, 1)
 def sigmoid(x):
-    return 1.0 / (1.0 + pow(math.e, -x))
+    return 1.0 / (1.0 + np.power(math.e, -x))
 
 
 # get the value of the derivative of the mathematical function sigmoid for x

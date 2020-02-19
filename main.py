@@ -5,7 +5,26 @@ TODO
 
 Back propagation
 
-Investigate methods, make sure they line up with mathematical models
+Figure out how to apply the chain rule through recursive calls through backpropagate
+    Also, the cost function derivative should be affected by all final output nodes, not just some?
+        what does this even mean????
+
+    Calculate the part of the derivative for each value
+        that's the same across weight, bias, and activation
+        this is mainly for efficiency in run time
+
+    Make it no longer recursive
+        Basically, first find the weight and bias matrix values for the output layer, which is based on the
+            expected values
+        Then, start at the second to last layer, and take the derivatives from that first layer
+            then multiply them back, continuing the chain rule through all layers
+
+    Make back propagation return a list of tuples,
+        first part of a tuple is the 2D weight matrix
+        second part of a tuple is the 1D bias matrix
+
+
+Change lists to use numpy arrays rather than normal Python lists
 
 
 
@@ -14,7 +33,6 @@ Network
 
 Make a class extending Network, specifically with extra functionality for processing images and saving things
     like height and width
-
 
 
 
@@ -29,7 +47,6 @@ Add option to TrainingData.scaleImage for resizing based on adding black bars, o
 
 Bugs:
 
-Fix issue with overflow when using somewhat large values for sigmoid
 Sometimes when images are loaded in MakeImages.videoToPillowImages, they are in the wrong color format,
     need to figure out places where it needs to be converted
 
@@ -47,7 +64,7 @@ Add a way to create a random neural network from a seed
 import NeuralNet.FeedForward as Net
 from ImageManip.TrainingData import *
 
-
+"""
 width = 32
 height = 18
 trainCount = 20
@@ -62,11 +79,11 @@ vidNet.load("vidNet")
 
 afterPath = "images/after/"
 processFromFolder(vidNet, "training (train_data)/grayInput/", afterPath, width, height)
-
+"""
 
 #
 PRINT_EXTRA = False
-TRAIN_COUNT = 100
+TRAIN_COUNT = 200
 
 netSize = [4, 6, 2]
 
@@ -140,3 +157,6 @@ def testTraining():
 
     print("\nAfter:\n")
     printData(net)
+
+
+testTraining()
