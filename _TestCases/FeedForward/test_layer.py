@@ -36,15 +36,15 @@ class TestLayer(TestCase):
     def test_calculate(self):
         lay = Net.Layer((3, 2))
         for n in lay.nodes:
-            self.assertTrue(n.value == 0, "Before calculations, value should be 0, was: " + str(n.value))
+            self.assertTrue(n.activation == 0, "Before calculations, value should be 0, was: " + str(n.activation))
 
         inLay = Net.Layer((2, 0))
         inLay.random()
-        inLay.nodes[0].value = .4
-        inLay.nodes[1].value = -.5
+        inLay.nodes[0].activation = .4
+        inLay.nodes[1].activation = -.5
         lay.calculate(inLay)
         for n in lay.nodes:
-            self.assertFalse(n.value == 0, "After calculations, value should not be 0")
+            self.assertFalse(n.activation == 0, "After calculations, value should not be 0")
 
     def test_random(self):
         lay = Net.Layer((4, 2))
@@ -62,15 +62,15 @@ class TestLayer(TestCase):
 
     def test_save(self):
         lay = Net.Layer((2, 3))
-        lay.nodes[0].value = .1
-        lay.nodes[0].activation = .2
+        lay.nodes[0].activation = .1
+        lay.nodes[0].zActivation = .2
         lay.nodes[0].bias = .3
         lay.nodes[0].connections[0].weight = .11
         lay.nodes[0].connections[1].weight = .12
         lay.nodes[0].connections[2].weight = .13
 
-        lay.nodes[1].value = .4
-        lay.nodes[1].activation = .5
+        lay.nodes[1].activation = .4
+        lay.nodes[1].zActivation = .5
         lay.nodes[1].bias = .6
         lay.nodes[1].connections[0].weight = .21
         lay.nodes[1].connections[1].weight = .22
@@ -90,8 +90,8 @@ class TestLayer(TestCase):
         self.assertEqual(len(layLoad.nodes[1].connections), 3, "Node 1 should have 3 connections after loading, had "
                          + str(len(layLoad.nodes[1].connections)))
 
-        self.assertEqual(layLoad.nodes[0].value, .1, "Testing node 0 value is correct after load")
-        self.assertEqual(layLoad.nodes[0].activation, .2, "Testing node 0 activation is correct after load")
+        self.assertEqual(layLoad.nodes[0].activation, .1, "Testing node 0 activation is correct after load")
+        self.assertEqual(layLoad.nodes[0].zActivation, .2, "Testing node 0 zActivation is correct after load")
         self.assertEqual(layLoad.nodes[0].bias, .3, "Testing node 0 bias is correct after load")
         self.assertEqual(layLoad.nodes[0].connections[0].weight, .11, "Testing node 0 connection weight 0"
                                                                       "is correct after load")
@@ -100,8 +100,8 @@ class TestLayer(TestCase):
         self.assertEqual(layLoad.nodes[0].connections[2].weight, .13, "Testing node 0 connection weight 2"
                                                                       "is correct after load")
 
-        self.assertEqual(layLoad.nodes[1].value, .4, "Testing node 0 value is correct after load")
-        self.assertEqual(layLoad.nodes[1].activation, .5, "Testing node 0 value is correct after load")
+        self.assertEqual(layLoad.nodes[1].activation, .4, "Testing node 0 value is correct after load")
+        self.assertEqual(layLoad.nodes[1].zActivation, .5, "Testing node 0 value is correct after load")
         self.assertEqual(layLoad.nodes[1].bias, .6, "Testing node 0 value is correct after load")
         self.assertEqual(layLoad.nodes[1].connections[0].weight, .21, "Testing node 1 connection weight 0"
                                                                       "is correct after load")

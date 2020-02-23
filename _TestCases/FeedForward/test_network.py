@@ -21,8 +21,8 @@ class TestNetwork(TestCase):
         layers = []
 
         nodes = [Net.Node([]), Net.Node([])]
-        nodes[0].value = 3.3
-        nodes[1].value = -1.5
+        nodes[0].activation = 3.3
+        nodes[1].activation = -1.5
         layers.append(Net.Layer(nodes))
 
         nodes = [
@@ -49,10 +49,10 @@ class TestNetwork(TestCase):
 
     def test_getOutputs(self):
         net = Net.Network([1, 4])
-        net.layers[-1].nodes[0].value = 3
-        net.layers[-1].nodes[1].value = -2
-        net.layers[-1].nodes[2].value = 2
-        net.layers[-1].nodes[3].value = 7
+        net.layers[-1].nodes[0].activation = 3
+        net.layers[-1].nodes[1].activation = -2
+        net.layers[-1].nodes[2].activation = 2
+        net.layers[-1].nodes[3].activation = 7
         self.assertTrue(net.getOutputs() == [3, -2, 2, 7], "Outputs should be: [3, -2, 2, 7],"
                                                            " was: " + str(net.getOutputs()))
 
@@ -61,16 +61,16 @@ class TestNetwork(TestCase):
         expect = [1, 2, 5, -3]
         net.feedInputs(expect)
         for i in range(4):
-            v = net.layers[0].nodes[i].value
+            v = net.layers[0].nodes[i].activation
             self.assertTrue(v == expect[i], "Input node value should be " + str(expect[i]) + ", was: " + str(v))
 
     def test_backpropagate(self):
         net = getTestNet()
-        net.backpropagate(3, [0.5], [])
+        net.backpropagate([0.5])
 
     def test_applyGradient(self):
         net = getTestNet()
-        grad = net.backpropagate(3, [0.5], [])
+        grad = net.backpropagate([0.5])
         net.applyGradient(grad)
 
     def test_train(self):
@@ -81,7 +81,7 @@ class TestNetwork(TestCase):
         net.feedInputs([.1, .2, .3, .4])
         net.calculate()
         newOut = net.getOutputs()[0]
-        self.assertLess(abs(newOut - ex), abs(out - ex), "After training, the output of the network should be closer"
+        self.assertLess(abs(newOut - ex), abs(out - ex), "After training, the output of the network should be closer "
                                                          "to the expected value. Expected value: .5,\ninitial value:\t"
                                                          "" + str(out) + "\nafter training:\t" + str(newOut))
 
@@ -124,9 +124,9 @@ class TestNetwork(TestCase):
 
         for l, lay in enumerate(net.layers):
             for n, nd in enumerate(lay.nodes):
-                self.assertEqual(nd.value, netLoad.layers[l].nodes[n].value,
-                                 "Value of a node should match after loading network")
                 self.assertEqual(nd.activation, netLoad.layers[l].nodes[n].activation,
+                                 "Value of a node should match after loading network")
+                self.assertEqual(nd.zActivation, netLoad.layers[l].nodes[n].zActivation,
                                  "Activation of a node should match after loading network")
                 self.assertEqual(nd.bias, netLoad.layers[l].nodes[n].bias,
                                  "Bias of a node should match after loading network")

@@ -40,7 +40,7 @@ class Network:
     def getOutputs(self):
         outs = []
         for n in self.layers[-1].nodes:
-            outs.append(n.value)
+            outs.append(n.activation)
 
         return outs
 
@@ -48,153 +48,130 @@ class Network:
     # inputs: the values to input to the Network, must be the same size as the length of the first layer
     def feedInputs(self, inputs):
         for i in range(len(inputs)):
-            self.layers[0].nodes[i].value = inputs[i]
+            self.layers[0].nodes[i].activation = inputs[i]
 
     # use backpropagation to find the gradient vector for the given layer, using the given expected values, at the
     #   given layer
-    # before calling this method, should feed inputs and calculate data for one training example,
+    # before calling this method, should call feedInputs for one training example,
     #   the expected values for the initial call of this method should be that of the training example
     # returns the final gradient to apply to all weights and biases
-    #   the order is as follows:
-    #       first element is a 2D list of the adjustments that need to be made to the weights feeding to output nodes
-    #       second element is a list of all the adjustments that need to be made to the biases of the output nodes
-    #       continue this with each layer, the input layer shouldn't be effected, it doesn't care about weights
-    # lay: the number of layers from the output layer to apply the back propagation algorithm
-    # expected: the desired values of the given layer
-    # gradient: the list of values keeping track of the adjustments that should be made to all weights and biases
-    #   should give this an empty list when calling this initially
-    def backpropagate(self, lay, expected, gradient):
-        # base case, when lay is 0, that means there are no more layers to propagate through
-        if lay == 0:
-            return gradient
+    #   this is in the form of a tuple
+    #   the 0 index is is the weights
+    #   the 1 index is the biases
+    #   the weights are a 3D list, each element is a 2D list of the weights for each layer in reverse order
+    #       so the first element is the weights from the output layer to the second to last layer
+    #       and the last element is the weights from the input layer to the second layer
+    #   the biases are a 2D list, each element is the biases for each layer in reverse order
+    #       so the first element is the biases for the last layer
+    #       and the last element is the biases for the first layer
+    # expected: the desired values of the output layer
+    def backpropagate(self, expected):
+        # calculate activations and values of nodes, these can directly be accessed from the Network
+        self.calculate()
 
-        # set up variable for activations
-        activations = []
-
-        # the list that will contain all the changes made to weights
+        # the list that will contain all the changes to be made to weights
         wGradient = []
 
-        # iterate through the number of connections feeding into the current layer
-        # find the change in weights for all values
-        # find the values of the individual activations going into sigmoid functions, only for this layer
-        for k in range(self.layers[lay - 1].size()):
-            # add one list to the activations
-            activations.append([])
-            # add one list to the weights
-            wGradient.append([])
-            # iterate through the number of nodes in the current layer
-            for j in range(self.layers[lay].size()):
-                # get the node currently being iterated over
-                node0 = self.layers[lay].nodes[j]
-                # get the node that has the connection from the current iterated connection,
-                #   and where that connection feeds into the currently iterated node
-                node1 = self.layers[lay - 1].nodes[k]
-
-                # find the activation value for the current node connection
-                activations[-1].append(node0.bias + node0.connections[k].weight * node1.value)
-
-                # determine change in weight,
-                #   this is the derivative of the cost function with respect to the current connection's weight
-                # there are 3 terms, one for each part of the chain rule
-                # the first term is the derivative of the value plugged into the sigmoid, the activation,
-                #   with respect to the connection's weight
-                # the second term is the derivative of the sigmoid function,
-                #   with respect to the value, the activation, plugged into the sigmoid
-                # the third term is the derivative of the cost function,
-                #   with respect to the output of the sigmoid, the activation
-                change = node1.value * dSigmoid(activations[k][j]) * 2 * (node0.value - expected[j])
-
-                # TODO this?
-                """
-                if change > 0:
-                    change = .01
-                elif change < 0:
-                    change = -.01
-                """
-
-                # add the change for the weight onto the list of weights, placing it at the end
-                wGradient[-1].append(change)
-
-        # add the 2D list of weights as one more element to the gradient
-        gradient.append(wGradient)
-
         # the list that will contain all the values for all the changes in biases
-        bGradient = []
-        # iterate through every node in the current layer
-        for j in range(self.layers[lay].size()):
-            # get the node currently being iterated through
-            node = self.layers[lay].nodes[j]
-            # add the change in bias value to the bias gradient list
-            # this means finding the derivative of the cost function with respect to the bias
-            # the first term is not here, because it works out to just 1, having no effect on the derivative
-            # the second term is the derivative of the sigmoid with the value feeding into it
-            # the third term is the derivative of the cost function with respect to the activation
+        # also create add an empty list for the first layer
+        bGradient = [[]]
 
-            # calculate the change
-            change = dSigmoid(node.activation) * 2 * (node.value - expected[j])
+        # calculate the partial parts of the derivatives, the part that is the same for all terms
+        #   this only happens on the last layer
+        baseDerivatives = []
+        for j, n in enumerate(self.layers[-1].nodes):
+            # find the derivative value for the first 2 terms
+            derivative = dSigmoid(n.zActivation) * costDerivative(n.activation, expected[j])
+            # add the derivative to the baseDerivatives list
+            baseDerivatives.append(derivative)
+            # the bias values get the same derivative, so add it to that list also
+            bGradient[-1].append(derivative)
 
-            # TODO this?
-            """
-            if change > 0:
-                change = .01
-            elif change < 0:
-                change = -.01
-            """
+        # now set up the weight change values for the last layer
+        # first add an empty list for the 2D list of the weights for the last layer
+        wGradient.append([])
+        # iterate through all nodes in the last layer
+        for k in range(len(self.layers[-1].nodes)):
+            # add an empty list for the next set of weights
+            wGradient[-1].append([])
+            # iterate through all nodes in the second to last layer
+            for node in self.layers[-2].nodes:
+                # calculate the change in weight for the connection between the two current nodes
+                wGradient[-1][-1].append(baseDerivatives[k] * node.activation)
 
-            # add the change value
-            bGradient.append(change)
+        # now, iterate through the rest of the layers, applying the derivatives as the go back through the layers
+        # the indexes for the layers use the negative index of lay, to go backwards through the list
+        for lay in range(2, len(self.layers)):
+            # first, find the derivative sigmoid values for each of the activations in the current layer
+            # this is for the next part of calculating this layer's derivatives
 
-        # add the bias gradient list to the main gradient list
-        gradient.append(bGradient)
+            # set up a list to keep track of the sigmoid values
+            dSigmoids = []
+            # iterate through each of the nodes in the current layer, and take it's activation through the sigmoid
+            for n in self.layers[-lay].nodes:
+                dSigmoids.append(dSigmoid(n.zActivation))
 
-        # the list keeping track of the changes to activation
-        #   these will not be change values, as they are the desired values for the activations
-        #   this means the computed value for the derivative will be added to the actual activation
-        aGradient = []
-        # iterate through all the nodes in the previous layer
-        for k in range(self.layers[lay - 1].size()):
-            # initialize counter for value fed into the derivative for finding change in activation
-            # this doesn't need an initial bias, as it's not finding an activation total,
-            #   but the total change to the cost function
-            total = 0
-            # iterate though all the nodes in the current layer
-            for j in range(self.layers[lay].size()):
-                # get the node of the current layer
-                node = self.layers[lay].nodes[j]
-                # find the derivative of the cost function with respect to the activation of the previous layer
-                # the first term is the weight feeding into the current node
-                # the second term is the derivative of the sigmoid with respect to the activation of current layer
-                # the third term is the derivative of the cost function,
-                #   with respect to the activation of the current node
-                total += node.connections[k].weight * dSigmoid(activations[k][j]) * 2 * (node.value - expected[j])
-            # change the total to be the average change in the cost function for all expected nodes
-            total /= self.layers[lay].size()
-            # add the value of the change in activation to the list
-            aGradient.append(total)
+            # now, take those values and multiply them with corresponding weights, and the derivatives from the
+            #   previous layer to determine the values for the biases
+            # add one entry to the list for the bias gradient
+            bGradient.append([])
+            # make a new list to store all the new derivatives
+            newDerivatives = []
 
-        # recursively call this algorithm
-        # backpropagate on the previous layer,
-        #   use the values from the desired activations for the expected values
-        #   use the current gradient to ensure that all weight and bias change values are stored in order
-        return self.backpropagate(lay - 1, aGradient, gradient)
+            # iterate through each of the nodes in the current layer
+            for j in range(len(self.layers[-lay].nodes)):
+                # find the derivative value for the first 2 terms
+                # add up the values as the previous weight matrix
+                total = 0
+                for i in range(len(baseDerivatives)):
+                    total += baseDerivatives[i] * self.layers[-lay + 1].nodes[i].connections[j].weight
+
+                # the final derivative is the current derivative sigmoid value times the total from the previous
+                #   matrix calculation
+                derivative = dSigmoids[j] * total
+                # set the new base derivative
+                newDerivatives.append(derivative)
+
+                # store the change in bias in the bias gradient for the nodes in the current layer to the derivatives
+                #   calculated in the previous step
+                # the bias values get the same derivative, so add it to that list also
+                bGradient[-1].append(derivative)
+
+            # set the base derivative list to the newly calculated list
+            baseDerivatives = newDerivatives
+
+            # find the derivatives for the weights, and store them in the weight gradient
+
+            # add a new entry to the weight gradient
+            wGradient.append([])
+
+            # iterate through all the nodes in the current layer
+            for k in range(len(self.layers[-lay].nodes)):
+                # add an empty list for the next set of weights
+                wGradient[-1].append([])
+                # iterate through all nodes in the layer before the current layer
+                for node in self.layers[-lay - 1].nodes:
+                    # calculate the change in weight for the connection between the two current nodes
+                    wGradient[-1][-1].append(baseDerivatives[k] * node.activation)
+
+        # return a tuple of the weight and bias gradients
+        return wGradient, bGradient
 
     # apply a gradient for backpropagation to this Network, the rules for the gradient are the same as the gradient
     # returned from backpropagate()
     def applyGradient(self, gradient):
-        # count down from the last layer to the second to last layer
-        for i in range(len(self.layers) - 1, 0, -1):
+        # count down from the last layer, using -i as the index, this does not include the first layer
+        for i in range(1, len(self.layers)):
             # iterate through all the nodes from the current layer
-            for j in range(self.layers[i].size()):
+            for j in range(self.layers[-i].size()):
                 # iterate through all the nodes from the previous layer
-                for k in range(self.layers[i - 1].size()):
-                    # take the connection connecting the two nodes being iterated over,
-                    #   and subtract its corresponding change in weight
-                    self.layers[i].nodes[j].connections[k].weight -= \
-                        gradient[-i * 2][k][j] * Settings.NET_PROPAGATION_RATE
+                for k in range(self.layers[-i - 1].size()):
+                    # apply each weight change
+                    self.layers[-i].nodes[j].connections[k].weight -= \
+                        gradient[0][i - 1][j][k] * Settings.NET_PROPAGATION_RATE
 
-                # take the current node and subtract its corresponding change in bias
-                self.layers[i].nodes[j].bias -= \
-                    gradient[1 - i * 2][j] * Settings.NET_PROPAGATION_RATE
+                # apply the bias changes
+                self.layers[-i].nodes[j].bias -= gradient[1][i - 1][j] * Settings.NET_PROPAGATION_RATE
 
     # train the network on training data
     # send a single tuple of two lists for one input, send a list of tuples for multiple pieces of data
@@ -213,7 +190,7 @@ class Network:
             self.feedInputs(data[0])
             self.calculate()
             # calculate the gradient
-            gradient = self.backpropagate(len(self.layers) - 1, data[1], [])
+            gradient = self.backpropagate(data[1])
 
             # if the total gradient is empty, then set it to the new gradient
             if not gradientTotal:
@@ -349,21 +326,21 @@ class Node:
 
         # value is the current values stored in this node
         # value is always initialized to 0
-        self.value = 0
+        self.activation = 0
 
         # the value of the activation before it's sent into the sigmoid function
-        self.activation = 0
+        self.zActivation = 0
 
     # determine the value of this Node by giving it a layer of nodes. The value is stored in this Node, and returned
     # the number of nodes in layer must be equal to the number of connections in this Node
     def feedLayer(self, layer):
-        self.activation = self.bias
+        self.zActivation = self.bias
         for i in range(layer.size()):
-            self.activation += layer.nodes[i].value * self.connections[i].weight
+            self.zActivation += layer.nodes[i].activation * self.connections[i].weight
 
-        self.value = sigmoid(self.activation)
+        self.activation = sigmoid(self.zActivation)
 
-        return self.value
+        return self.activation
 
     # randomly generate a value for every connection in the Node and its bias
     def random(self):
@@ -375,7 +352,7 @@ class Node:
 
     # get a text representation of this node
     def getText(self):
-        s = "Node: value: " + str(self.value) + ", bias:" + str(self.bias) + ", "
+        s = "Node: value: " + str(self.activation) + ", bias:" + str(self.bias) + ", "
         for c in self.connections:
             s += c.getText()
         return s + "\n"
@@ -383,8 +360,8 @@ class Node:
     # save this Node to the given file IO object in write mode
     def save(self, f):
         # save data about the node
-        f.write(str(len(self.connections)) + " " + str(self.bias) + " " + str(self.value)
-                + " " + str(self.activation) + "\n")
+        f.write(str(len(self.connections)) + " " + str(self.bias) + " " + str(self.activation)
+                + " " + str(self.zActivation) + "\n")
         # save each connection
         for c in self.connections:
             c.save(f)
@@ -398,8 +375,8 @@ class Node:
         line = f.readline().split(' ')
         size = int(line[0])
         self.bias = float(line[1])
-        self.value = float(line[2])
-        self.activation = float(line[3])
+        self.activation = float(line[2])
+        self.zActivation = float(line[3])
 
         self.connections = []
 
@@ -445,6 +422,10 @@ def sigmoid(x):
 def dSigmoid(x):
     sig = sigmoid(x)
     return sig - sig * sig
+
+
+def costDerivative(actual, expected):
+    return 2 * (actual - expected)
 
 
 # utility function to seed the random number generator

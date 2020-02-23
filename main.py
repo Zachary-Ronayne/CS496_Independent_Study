@@ -5,26 +5,11 @@ TODO
 
 Back propagation
 
-Figure out how to apply the chain rule through recursive calls through backpropagate
-    Also, the cost function derivative should be affected by all final output nodes, not just some?
-        what does this even mean????
-
-    Calculate the part of the derivative for each value
-        that's the same across weight, bias, and activation
-        this is mainly for efficiency in run time
-
-    Make it no longer recursive
-        Basically, first find the weight and bias matrix values for the output layer, which is based on the
-            expected values
-        Then, start at the second to last layer, and take the derivatives from that first layer
-            then multiply them back, continuing the chain rule through all layers
-
-    Make back propagation return a list of tuples,
-        first part of a tuple is the 2D weight matrix
-        second part of a tuple is the 1D bias matrix
-
-
+Test out code and make sure backpropagation works all as intended
+    for some reason, all images are always the same?
+Make very clear comments for all backpropagation code
 Change lists to use numpy arrays rather than normal Python lists
+Add option to change the type of cost function
 
 
 
@@ -64,29 +49,38 @@ Add a way to create a random neural network from a seed
 import NeuralNet.FeedForward as Net
 from ImageManip.TrainingData import *
 
-"""
+
 width = 32
 height = 18
-trainCount = 20
+trainCount = 0
 
-# vidData = splitVideoToFolders("", "training", (width, height), skip=30, start=0, end=300, frameRange=True)
-vidData = dataFromFolders("training (train_data)/")
+trainFolder = "training"
+# splitVideoToInOutImages("", trainFolder, (width, height), skip=1, start=0, end=400, frameRange=True)
+vidData = dataFromFolders(trainFolder + " (train_data)/")
 
 # vidNet = Net.makeImageNetwork(width, height, [20, 20])
 # vidNet.random()
 vidNet = Net.Network()
 vidNet.load("vidNet")
 
+for i in range(trainCount):
+    print("training: " + str(i))
+    vidNet.train(vidData)
+
+vidNet.save("vidNet")
+
 afterPath = "images/after/"
-processFromFolder(vidNet, "training (train_data)/grayInput/", afterPath, width, height)
-"""
+processFromFolder(vidNet, trainFolder + " (train_data)/grayInput/", afterPath, width, height)
+
+
+
+
 
 #
-PRINT_EXTRA = False
-TRAIN_COUNT = 200
+PRINT_EXTRA = True
+TRAIN_COUNT = 2000
 
 netSize = [4, 6, 2]
-
 
 data = [
     ([1, 2, 3, 4], [.5, .2]),
@@ -94,6 +88,14 @@ data = [
     ([.5, 1, 1.8, 2.8], [.8, .4]),
     ([.2, .8, 1.6, 2], [.85, .43]),
 ]
+"""
+data = [
+    ([1, 1, 1, 1], [.5, .5]),
+    ([.5, .5, .5, .5], [.25, .25]),
+    ([.51, .51, .51, .51], [.26, .26]),
+    ([.1, .1, .1, .1], [.05, .05]),
+]
+"""
 
 
 def printData(net):
@@ -159,4 +161,4 @@ def testTraining():
     printData(net)
 
 
-testTraining()
+# testTraining()
