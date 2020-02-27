@@ -3,20 +3,23 @@ from ImageManip.MakeImages import *
 import shutil
 
 
-# take all the images in a folder and generate training data images for all images in the given source
-# the data is split into two folders, one is the gray scale input, in a folder called grayInput
-# the other is the colored expected output in a folder called colorOutput
-# all images will be the same aspect ratio as the originals, adding black bars to the sides or top
-# if extra space needs to be filled
-# all images will be the same number of pixels in width and height
-# width: the number of pixels in the width of the output images, must be a positive integer > 0
-# height: the number of pixels in the height of the output images, must be a positive integer > 0
-# source: the path to the folder containing all images. The folder must only contain images.
-#   The folder is relative to the images directory
-#   or
-#   a list of Pillow images to convert
-# folder: the folder to save the images to, relative to images
 def folderToInOutImages(width, height, source, folder):
+    """
+    Take all the images in a folder and generate training data images for all images in the given source.
+    The data is split into two folders, one is the gray scale input, in a folder called grayInput.
+    The other is the colored expected output in a folder called colorOutput.
+    All images will be the same aspect ratio as the originals, adding black bars to the sides or top
+        if extra space needs to be filled.
+    All images will be the same number of pixels in width and height.
+    :param width: The number of pixels in the width of the output images, must be a positive integer > 0
+    :param height: The number of pixels in the height of the output images, must be a positive integer > 0
+    :param source: The path to the folder containing all images. The folder must only contain images.
+        The folder is relative to the images directory
+        or
+        a list of Pillow images to convert
+    :param folder: The folder to save the images to, relative to images
+    :return:
+    """
     # direct the folder to the images folder
     folder = "images/" + folder + "/"
 

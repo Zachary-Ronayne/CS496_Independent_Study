@@ -413,6 +413,146 @@ class Connection:
         f.write(str(self.weight) + " ")
 
 
+class MatrixNetwork:
+    """
+    A class that performs the same Network operations, but using much more efficient methods for storage and processing.
+    This class has less convenience features than Network, and is harder to navigate from a code perspective
+    """
+
+    def __init__(self, sizes):
+        """
+        Initialize the numpy arrays for this Network based on the given size.
+        All weights and biases are initialized to zero
+        :param sizes: a list of numbers,
+            the first entry is the length of the input list,
+            the last entry is the length of the output list,
+            all other entries are the sizes of hidden layers.
+            So [2, 3, 4, 5] has 2 inputs, then a hidden layer of 3 nodes,
+            then a hidden layer of 4 nodes, then 5 output nodes
+        """
+
+        # initialize the weight and bias lists
+        self.weights = []
+        self.biases = []
+
+        # add appropriately sized numpy arrays
+        for k in range(len(sizes) - 1):
+            self.weights.append(np.zeros((sizes[k], sizes[k + 1]), np.float64))
+            self.biases.append(np.zeros((sizes[k]), np.float64))
+
+    def calculateInputs(self, inputs):
+        """
+        Take the given input values and calculate the corresponding outputs.
+        :param inputs: The inputs numerical values, must be a list of the same size as the inputs
+        :return: A list of values representing all the outputs of the Network
+        """
+        pass
+
+    def backpropagate(self, inputs, expected):
+        """
+        Calculate the gradient for changing the weights and biases.
+        :param inputs: The inputs numerical values, must be a list of the same size as the input layer
+        :param expected: The expected output numerical values, must be a list of the same size as the output layer
+        :return: A tuple of the changed to be made to weights and biases.
+            The first entry is a list of all the weight changes
+            The second entry is a list of all the bias changes
+        """
+        pass
+
+    def applyGradient(self, gradient):
+        """
+        Apply the given gradient to the weights and biases
+        :param gradient: The gradient to apply
+        """
+        pass
+
+    def train(self, data, shuffle=False, split=1, times=0):
+        """
+        Take the given data train the Network with it.
+        :param data: The training data. Can be a single tuple containing the input and then the outputs
+            Also could be a list of tuples for training data.
+        :param shuffle: True to shuffle data each time the training loops, False otherwise
+        :param split: Split the training data into subsets of this size.
+        :param times: Train on the data this number of times
+        """
+        pass
+
+    def random(self):
+        """
+        set all the weights and bias values to random values based on the maximum values in Settings
+        """
+        # seed the random number generator
+        random.seed(time.time())
+
+        # go through each layer
+        for k in range(len(self.weights)):
+            # go through each weight and bias going into each node of the layer
+            for i in range(len(self.weights[k])):
+                # randomly change the bias
+                self.biases[k][i] = random.uniform(-Settings.NET_MAX_BIAS, Settings.NET_MAX_BIAS)
+                # go through each weight going into each specific node
+                for j in range(len(self.weights[k][i])):
+                    # randomly change the weight
+                    self.weights[k][i, j] = random.uniform(-Settings.NET_MAX_WEIGHT, Settings.NET_MAX_WEIGHT)
+
+    def save(self, name):
+        """
+        Save this network with the given name, relative to saves.
+        This save file will not be compatible with the regular Network
+        :param name: The name to save under. Don't include a file extension.
+        """
+        with open("saves/" + name + ".txt", "w") as f:
+            # save the number of layers
+            f.write(str(len(self.weights)) + "\n")
+            # go through each layer
+            for k in range(len(self.weights)):
+                # save the biases of this node
+                f.write(str(self.biases[k]) + "\n")
+                # save the number of nodes and weights in the current layer
+                nodes = len(self.weights[k])
+                f.write(str(nodes) + " " + str(len(self.weights[k][0])) + "\n")
+                # go through each node in the current layer
+                for i in range(nodes):
+                    # save the weights for that layer
+                    f.write(str(self.weights[k][i]) + "\n")
+
+    def load(self, name):
+        """
+        Load this network from the file with the given name, relative to saves.
+        This method is not compatible with the regular Network save files
+        :param name: The name of the file to load. Don't include a file extension.
+        """
+        with open("saves/" + name + ".txt", "r") as f:
+            # initialize the weights and biases to empty lists
+            self.weights = []
+            self.biases = []
+
+            # TODO make loading work correctly
+
+            # get the number of layers
+            layers = int(f.readline())
+            # go through all the layers
+            for k in range(layers):
+                self.biases.append(np.fromstring(f.readline()))
+                # get the number of nodes in the given layer
+                sizes = tuple(f.readline())
+                self.weights.append(np.empty(sizes, np.float64))
+                for i in range(sizes[0]):
+                    self.weights[k][i] = np.fromstring(f.readline())
+
+    def getText(self):
+        """
+        Get a user readable string representing this Network
+        :return: the string
+        """
+        # TODO add labels and stuff
+        text = []
+        for w, b, in zip(self.weights, self.biases):
+            text.append(str(w))
+            text.append(str(b))
+        return "\n".join(text)
+
+
 # get the value of the mathematical function sigmoid for x, return values are always in the range (0, 1)
 def sigmoid(x):
     return 1.0 / (1.0 + np.power(math.e, -x))

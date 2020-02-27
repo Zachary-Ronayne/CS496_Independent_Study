@@ -7,9 +7,10 @@ Back propagation
 
 Test out code and make sure backpropagation works all as intended
     for some reason, all images are always the same?
-Make very clear comments for all backpropagation code
+Add thing to automatically shuffle test data
 Change lists to use numpy arrays rather than normal Python lists
-Add option to change the type of cost function
+Make separate backpropagation method that uses matrix multiplication
+    will also need to set up a conversion thing to transform a Network object into just two objects for weights and bias
 
 
 
@@ -48,37 +49,57 @@ Add a way to create a random neural network from a seed
 
 import NeuralNet.FeedForward as Net
 from ImageManip.TrainingData import *
+from ImageManip.ColorSquares import *
+import random
 
 
-width = 32
-height = 18
-trainCount = 0
+# saveSquareTrainingData("colorSquareTest", "", 100, size=5, width=5, height=5)
 
-trainFolder = "training"
-# splitVideoToInOutImages("", trainFolder, (width, height), skip=1, start=0, end=400, frameRange=True)
+
+"""
+matrixNet = Net.MatrixNetwork([2, 3, 4, 5])
+matrixNet.random()
+
+print(matrixNet.getText())
+
+matrixNet.save("test")
+matrixNet.load("test")
+"""
+
+width = 25
+height = 25
+trainCount = 5
+dataSplit = 1
+trainFolder = "colorSquareTest"
+afterPath = "images/after/"
+loadNet = True
+
+
+# splitVideoToInOutImages("", trainFolder, (width, height), skip=2)
 vidData = dataFromFolders(trainFolder + " (train_data)/")
 
-# vidNet = Net.makeImageNetwork(width, height, [20, 20])
-# vidNet.random()
-vidNet = Net.Network()
-vidNet.load("vidNet")
+if loadNet:
+    vidNet = Net.Network()
+    vidNet.load("vidNet")
+else:
+    vidNet = Net.makeImageNetwork(width, height, [20])
+    vidNet.random()
 
 for i in range(trainCount):
-    print("training: " + str(i))
-    vidNet.train(vidData)
+    random.shuffle(vidData)
+    split = dataSubSet(vidData, dataSplit)
+    for j, s in enumerate(split):
+        print("training time " + str(i) + " subset " + str(j))
+        vidNet.train(s)
+
 
 vidNet.save("vidNet")
-
-afterPath = "images/after/"
 processFromFolder(vidNet, trainFolder + " (train_data)/grayInput/", afterPath, width, height)
 
 
-
-
-
 #
-PRINT_EXTRA = True
-TRAIN_COUNT = 2000
+PRINT_EXTRA = False
+TRAIN_COUNT = 200
 
 netSize = [4, 6, 2]
 
