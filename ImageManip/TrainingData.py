@@ -164,11 +164,8 @@ def processFromFolder(net, path, outPath, width, height):
 
     # determine and save all images
     for i, d in enumerate(data):
-        # determine the output of the Network with the current image
-        net.feedInputs(d)
-        net.calculate()
         # get the output data of the Network
-        img = dataToImage(net.getOutputs(), width, height)
+        img = dataToImage(net.calculateInputs(d), width, height)
         # save the output data as an image
         img.save(outPath + "output " + str(i) + ".png", "PNG")
 
@@ -247,11 +244,14 @@ def dataToImage(data, width, height):
     return img
 
 
-# take a single list of data and divide it into lists of equal size
-# data: the list of items to separate
-# size: the number of elements that should be in each sub list, any elements that don't fit evenly will be placed in
-#   one list smaller than the rest of the lists
 def dataSubSet(data, size):
+    """
+    Take a single list of data and divide it into lists of equal size
+    :param data: The list of items to separate
+    :param size: The number of elements that should be in each sub list, any elements that don't fit evenly will be placed in
+                one list smaller than the rest of the lists
+    :return: The subsets of data
+    """
     retData = []
 
     # go through the list of data in increments of the size of list divisions

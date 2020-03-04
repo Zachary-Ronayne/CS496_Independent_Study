@@ -5,14 +5,11 @@ TODO
 
 Back propagation
 
-Test out code and make sure backpropagation works all as intended
-    for some reason, all images are always the same?
-Add thing to automatically shuffle test data
-Change lists to use numpy arrays rather than normal Python lists
-Make separate backpropagation method that uses matrix multiplication
-    will also need to set up a conversion thing to transform a Network object into just two objects for weights and bias
-
-
+For some reason, all images are always the same?
+Set up up a conversion thing to transform a Network object into just two objects for weights and bias
+    Add methods to get things like number of layers, layer sizes, and so on
+    Allow the MatrixNetwork to use the max and min values for weight and bias
+Allow networks to input an image of one size, and output an image of a different size
 
 
 Network
@@ -25,7 +22,6 @@ Make a class extending Network, specifically with extra functionality for proces
 
 Image manipulation
 
-Make program for making random images of the color squares to use as training data
 Make GUI and commandline program for image manipulation
 Add option to TrainingData.scaleImage for resizing based on adding black bars, or stretching
 
@@ -36,6 +32,7 @@ Bugs:
 Sometimes when images are loaded in MakeImages.videoToPillowImages, they are in the wrong color format,
     need to figure out places where it needs to be converted
 
+Fix overflow in FeedForward.sigmoid(x)
 
 
 Misc
@@ -53,36 +50,24 @@ from ImageManip.ColorSquares import *
 import random
 
 
-# saveSquareTrainingData("colorSquareTest", "", 100, size=5, width=5, height=5)
-
-
-"""
-matrixNet = Net.MatrixNetwork([2, 3, 4, 5])
-matrixNet.random()
-
-print(matrixNet.getText())
-
-matrixNet.save("test")
-matrixNet.load("test")
-"""
-
-width = 25
-height = 25
-trainCount = 5
-dataSplit = 1
-trainFolder = "colorSquareTest"
+width = 64
+height = 36
+trainCount = 10
+dataSplit = 40
+trainFolder = "training"
 afterPath = "images/after/"
 loadNet = True
+splitVideoFile = False
 
-
-# splitVideoToInOutImages("", trainFolder, (width, height), skip=2)
+if splitVideoFile:
+    splitVideoToInOutImages("", trainFolder, (width, height), skip=1)
 vidData = dataFromFolders(trainFolder + " (train_data)/")
 
 if loadNet:
-    vidNet = Net.Network()
+    vidNet = Net.MatrixNetwork([])
     vidNet.load("vidNet")
 else:
-    vidNet = Net.makeImageNetwork(width, height, [20])
+    vidNet = Net.makeImageNetwork(width, height, [100, 100], matrixNet=True)
     vidNet.random()
 
 for i in range(trainCount):
@@ -99,7 +84,7 @@ processFromFolder(vidNet, trainFolder + " (train_data)/grayInput/", afterPath, w
 
 #
 PRINT_EXTRA = False
-TRAIN_COUNT = 200
+TRAIN_COUNT = 2000
 
 netSize = [4, 6, 2]
 
@@ -116,8 +101,8 @@ data = [
     ([.51, .51, .51, .51], [.26, .26]),
     ([.1, .1, .1, .1], [.05, .05]),
 ]
-"""
 
+"""
 
 def printData(net):
     for i in range(len(data)):
@@ -127,9 +112,7 @@ def printData(net):
 
         if PRINT_EXTRA:
             print("raw:")
-        net.feedInputs(data[i][0])
-        net.calculate()
-        outs = net.getOutputs()
+        outs = net.calculateInputs(data[i][0])
         if PRINT_EXTRA:
             print(outs)
 
@@ -169,7 +152,7 @@ def printGradient(gradient):
 
 
 def testTraining():
-    net = Net.Network(netSize)
+    net = Net.MatrixNetwork(netSize)
     net.random()
 
     print("\nBefore:\n")

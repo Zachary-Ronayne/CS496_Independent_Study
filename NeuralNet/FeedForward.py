@@ -2,6 +2,8 @@
 
 import Settings
 
+from ImageManip.TrainingData import dataSubSet
+
 import math
 import time
 import random
@@ -49,6 +51,16 @@ class Network:
     def feedInputs(self, inputs):
         for i in range(len(inputs)):
             self.layers[0].nodes[i].activation = inputs[i]
+
+    def calculateInputs(self, inputs):
+        """
+        Utility method to calculate and return the values of the Network
+        :param inputs: The values to feed into the network
+        :return:
+        """
+        self.feedInputs(inputs)
+        self.calculate()
+        return self.getOutputs()
 
     # use backpropagation to find the gradient vector for the given layer, using the given expected values, at the
     #   given layer
@@ -434,11 +446,12 @@ class MatrixNetwork:
         # initialize the weight and bias lists
         self.weights = []
         self.biases = []
+        self.sizes = sizes
 
         # add appropriately sized numpy arrays
         for k in range(len(sizes) - 1):
-            self.weights.append(np.zeros((sizes[k], sizes[k + 1]), np.float64))
-            self.biases.append(np.zeros((sizes[k]), np.float64))
+            self.weights.append(np.zeros((sizes[k + 1], sizes[k]), np.float64))
+            self.biases.append(np.zeros((sizes[k + 1]), np.float64))
 
     def calculateInputs(self, inputs):
         """
@@ -446,7 +459,14 @@ class MatrixNetwork:
         :param inputs: The inputs numerical values, must be a list of the same size as the inputs
         :return: A list of values representing all the outputs of the Network
         """
-        pass
+        # set up outputs as a numpy array
+        outputs = np.asarray(inputs)
+        # iterate through each layer of weights and biases
+        for w, b in zip(self.weights, self.biases):
+            # multiply the weight matrix by the current values of the layer, plus the bias, sent through sigmoid
+            outputs = sigmoid(np.dot(w, outputs) + b)
+
+        return outputs
 
     def backpropagate(self, inputs, expected):
         """
@@ -457,16 +477,79 @@ class MatrixNetwork:
             The first entry is a list of all the weight changes
             The second entry is a list of all the bias changes
         """
-        pass
+
+        # set up lists for the weight and bias gradients
+        # both of these create a numpy array of the same size as the weights and biases for that layer
+        wGradient = [np.zeros(w.shape) for w in self.weights]
+        bGradient = [np.zeros(b.shape) for b in self.biases]
+
+        # determine the activations and zActivations of each layer
+        # take the input list and ensure it's a numpy array
+        inputs = np.asarray(inputs)
+        # initialize the list of activations with the activations from the first layer
+        activations = [inputs]
+        # initialize a list to store all the zActivations
+        zActivations = []
+        # iterate through each pair of weights and biases for each layer
+        for w, b in zip(self.weights, self.biases):
+            # determine the zActivation array for the current layer
+            z = np.dot(w, inputs) + b
+            # add the zActivation array to the list
+            zActivations.append(z)
+            # determine the proper activation array for the current layer,
+            #   which is also used in the next loop iteration
+            inputs = sigmoid(z)
+            # add the activation array to the list
+            activations.append(inputs)
+
+        # calculate the first part of the derivatives, which will also be the bias values
+        # this is the cost derivative part, based on the expected outputs,
+        #   and the derivative of the sigmoid with the zActivation
+        baseDerivatives = costDerivative(activations[-1], expected) * dSigmoid(zActivations[-1])
+        # set the last element in the bias gradient to the initial base derivative
+        bGradient[-1] = baseDerivatives
+
+        # calculate the weight derivatives based on the activations of the previous layer, and the base derivatives
+        # using np.outer creates a 2D array from 2 1D arrays by multiplying each element in the first array
+        #   with each element in the second array
+        wGradient[-1] = np.outer(baseDerivatives, activations[-2].transpose())
+
+        # go through each remaining layers and calculate the remaining weight and bias derivatives
+        for lay in range(2, len(self.biases) + 1):
+            # find the derivatives of the zActivations for the current layer
+            # this is the next component in the chain rule, the sigmoid derivatives of the zActivations
+            dSigs = dSigmoid(zActivations[-lay])
+
+            # multiply the sigmoid derivative values with the corresponding weights
+            #   and derivatives from the previous layer
+            # this takes the dot product of the weights going into the current layer,
+            #   which is why self.weights is indexed at [-lay + 1], rather than [-lay]
+            # it is then multiplied by the values in dSigs for the other part of the derivative
+            baseDerivatives = np.dot(self.weights[-lay + 1].transpose(), baseDerivatives) * dSigs
+
+            # set the base derivatives in the bias list
+            bGradient[-lay] = baseDerivatives
+
+            # calculate and set the derivatives for the weight matrix
+            # using the same calculation as outside the loop with np.outer,
+            #   determine next part of the derivatives for the weight matrix
+            #   based on the baseDerivatives, and the activations of the previous layer
+            wGradient[-lay] = np.outer(baseDerivatives, activations[-lay - 1].transpose())
+
+        # return the final tuple of weight and bias gradients
+        return wGradient, bGradient
 
     def applyGradient(self, gradient):
         """
         Apply the given gradient to the weights and biases
         :param gradient: The gradient to apply
         """
-        pass
+        # go through all the bias and weight changes, and apply them
+        for i in range(len(self.biases)):
+            self.weights[i] = self.weights[i] - gradient[0][i]
+            self.biases[i] = self.biases[i] - gradient[1][i]
 
-    def train(self, data, shuffle=False, split=1, times=0):
+    def train(self, data, shuffle=False, split=1, times=1):
         """
         Take the given data train the Network with it.
         :param data: The training data. Can be a single tuple containing the input and then the outputs
@@ -475,7 +558,38 @@ class MatrixNetwork:
         :param split: Split the training data into subsets of this size.
         :param times: Train on the data this number of times
         """
-        pass
+        # if the data is not already a list of lists, put it in a list
+        if isinstance(data, tuple):
+            data = [data]
+
+        # split data into subsets
+        data = dataSubSet(data, split)
+
+        # train times number of times
+        for t in range(times):
+            # shuffle data if applicable
+            if shuffle:
+                random.shuffle(data)
+            # go through each subset of data of data
+            for dat in data:
+                # variable to keep track of all the gradient values
+                gradientTotal = (
+                    [np.zeros(w.shape) for w in self.weights],
+                    [np.zeros(b.shape) for b in self.biases]
+                )
+                # go through each piece of data in the subset
+                for d in dat:
+                    # calculate the gradient
+                    gradient = self.backpropagate(d[0], d[1])
+
+                    # add the gradient from the current backpropagation call to the total gradient
+                    # accounting for averages and leanring rate
+                    for i in range(len(gradient[0])):
+                        gradientTotal[0][i] += gradient[0][i] * Settings.NET_PROPAGATION_RATE / len(dat)
+                        gradientTotal[1][i] += gradient[1][i] * Settings.NET_PROPAGATION_RATE / len(dat)
+
+                # apply the final gradient
+                self.applyGradient(gradientTotal)
 
     def random(self):
         """
@@ -487,7 +601,7 @@ class MatrixNetwork:
         # go through each layer
         for k in range(len(self.weights)):
             # go through each weight and bias going into each node of the layer
-            for i in range(len(self.weights[k])):
+            for i in range(len(self.biases[k])):
                 # randomly change the bias
                 self.biases[k][i] = random.uniform(-Settings.NET_MAX_BIAS, Settings.NET_MAX_BIAS)
                 # go through each weight going into each specific node
@@ -502,19 +616,19 @@ class MatrixNetwork:
         :param name: The name to save under. Don't include a file extension.
         """
         with open("saves/" + name + ".txt", "w") as f:
-            # save the number of layers
-            f.write(str(len(self.weights)) + "\n")
+            # write the layer size data
+            f.write(" ".join([str(s) for s in self.sizes]))
+            f.write("\n")
             # go through each layer
             for k in range(len(self.weights)):
                 # save the biases of this node
-                f.write(str(self.biases[k]) + "\n")
-                # save the number of nodes and weights in the current layer
-                nodes = len(self.weights[k])
-                f.write(str(nodes) + " " + str(len(self.weights[k][0])) + "\n")
+                f.write(" ".join([str(b) for b in self.biases[k]]))
+                f.write("\n")
                 # go through each node in the current layer
-                for i in range(nodes):
+                for i in range(len(self.weights[k])):
                     # save the weights for that layer
-                    f.write(str(self.weights[k][i]) + "\n")
+                    f.write(" ".join([str(w) for w in self.weights[k][i]]))
+                    f.write("\n")
 
     def load(self, name):
         """
@@ -523,29 +637,46 @@ class MatrixNetwork:
         :param name: The name of the file to load. Don't include a file extension.
         """
         with open("saves/" + name + ".txt", "r") as f:
-            # initialize the weights and biases to empty lists
-            self.weights = []
-            self.biases = []
+            # get the values for the layers
+            layerSizes = [int(i) for i in f.readline().split(" ")]
 
-            # TODO make loading work correctly
+            # initialize the network based on the number of layers
+            self.__init__(layerSizes)
 
-            # get the number of layers
-            layers = int(f.readline())
-            # go through all the layers
-            for k in range(layers):
-                self.biases.append(np.fromstring(f.readline()))
-                # get the number of nodes in the given layer
-                sizes = tuple(f.readline())
-                self.weights.append(np.empty(sizes, np.float64))
-                for i in range(sizes[0]):
-                    self.weights[k][i] = np.fromstring(f.readline())
+            # go through all the layer sections for the weights and biases
+            for k in range(len(layerSizes) - 1):
+                # get the number of nodes and their connections in the given layer
+                sizes = (layerSizes[k], layerSizes[k + 1])
+
+                # load in the line containing all the bias values
+                biases = f.readline().split()
+                # initialize an array to load all the biases
+                b = np.empty(sizes[1], dtype=np.float64)
+                # set all the values
+                for i in range(len(b)):
+                    b[i] = biases[i]
+
+                # add the bias array to the biases list
+                self.biases[k] = b
+
+                # initialize an array to hold all the weights
+                w = np.empty(sizes, dtype=np.float64)
+                # go through each dimension of the weight array
+                for i in range(sizes[1]):
+                    # get the next line of weights
+                    weights = f.readline().split()
+                    for j in range(len(weights)):
+                        # set each weight values
+                        w[j, i] = weights[j]
+                # add the weight array to the weights list
+                self.weights[k] = w.transpose()
 
     def getText(self):
         """
         Get a user readable string representing this Network
         :return: the string
         """
-        # TODO add labels and stuff
+        # TODO add labels and stuff for user clarity
         text = []
         for w, b, in zip(self.weights, self.biases):
             text.append(str(w))
@@ -597,12 +728,19 @@ def combineList(list1, list2):
             list1[i] += list2[i]
 
 
-# create and return a Network made for taking input and output images of the specified size
-# width: the width of the images the Network should handle
-# height: the height of the images the Network should handle
-# hidden: the list of numbers of nodes in hidden layers
-def makeImageNetwork(width, height, hidden):
+def makeImageNetwork(width, height, hidden, matrixNet=True):
+    """
+    Create and return a Network made for taking input and output images of the specified size
+    :param width: The width of the images the Network should handle
+    :param height: The height of the images the Network should handle
+    :param hidden: The list of numbers of nodes in hidden layers
+    :param matrixNet: True to create a Matrix network, False to create an object oriented one, default True
+    :return: The corresponding Network
+    """
     hidden.insert(0, width * height)
     hidden.append(width * height * 3)
 
-    return Network(hidden)
+    if matrixNet:
+        return MatrixNetwork(hidden)
+    else:
+        return Network(hidden)
