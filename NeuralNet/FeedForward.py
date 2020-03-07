@@ -254,6 +254,21 @@ class Network:
                 lay.load(f)
                 self.layers.append(lay)
 
+    def convertToMatrix(self):
+        """
+        Take the weights and biases in this Network and convert them into a MatrixNetwork
+        :return: The converted Matrix Network
+        """
+        sizes = [len(lay.nodes) for lay in self.layers]
+        newNet = MatrixNetwork(sizes)
+        for k, lay in enumerate(self.layers[1:]):
+            for j, n in enumerate(lay.nodes):
+                newNet.biases[k][j] = n.bias
+                for i, c in enumerate(n.connections):
+                    newNet.weights[k][j][i] = c.weight
+
+        return newNet
+
 
 class Layer:
 
@@ -452,6 +467,21 @@ class MatrixNetwork:
         for k in range(len(sizes) - 1):
             self.weights.append(np.zeros((sizes[k + 1], sizes[k]), np.float64))
             self.biases.append(np.zeros((sizes[k + 1]), np.float64))
+
+    def layerCount(self):
+        """
+        Get the number of layers in this Network
+        :return: The number of layers
+        """
+        return len(self.sizes)
+
+    def layerSize(self, i):
+        """
+        Get the number of nodes in the ith layer
+        :param i: The layer
+        :return: the number of nodes
+        """
+        return self.sizes[i]
 
     def calculateInputs(self, inputs):
         """
@@ -676,12 +706,29 @@ class MatrixNetwork:
         Get a user readable string representing this Network
         :return: the string
         """
-        # TODO add labels and stuff for user clarity
         text = []
-        for w, b, in zip(self.weights, self.biases):
-            text.append(str(w))
+        for i, w, b, in zip(range(len(self.weights)), self.weights, self.biases):
+            text.append("".join(["Between layer ", str(i + 1), " and ", str(i + 2)]))
+            text.append("Biases:")
             text.append(str(b))
+            text.append("Weights:")
+            text.append(str(w))
+            text.append("")
         return "\n".join(text)
+
+    def convertToNormal(self):
+        """
+        Take the weights and biases in this Network and convert them into a normal Network
+        :return: The converted normal Network
+        """
+        newNet = Network(self.sizes)
+        for k, lay in enumerate(newNet.layers[1:]):
+            for j, n in enumerate(lay.nodes):
+                n.bias = self.biases[k][j]
+                for i, c in enumerate(n.connections):
+                    c.weight = self.weights[k][j][i]
+
+        return newNet
 
 
 # get the value of the mathematical function sigmoid for x, return values are always in the range (0, 1)

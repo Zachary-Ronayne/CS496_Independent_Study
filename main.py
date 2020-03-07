@@ -6,10 +6,9 @@ TODO
 Back propagation
 
 For some reason, all images are always the same?
-Set up up a conversion thing to transform a Network object into just two objects for weights and bias
-    Add methods to get things like number of layers, layer sizes, and so on
-    Allow the MatrixNetwork to use the max and min values for weight and bias
 Allow networks to input an image of one size, and output an image of a different size
+Add test cases for new methods
+Allow the MatrixNetwork to use the max and min values for weight and bias
 
 
 Network
@@ -35,6 +34,8 @@ Sometimes when images are loaded in MakeImages.videoToPillowImages, they are in 
 Fix overflow in FeedForward.sigmoid(x)
 
 
+
+
 Misc
 
 Add a way to create a random neural network from a seed
@@ -50,6 +51,21 @@ from ImageManip.ColorSquares import *
 import random
 
 
+matNet = Net.MatrixNetwork([3, 4, 5])
+matNet.random()
+print(matNet.getText())
+print()
+
+norm = matNet.convertToNormal()
+print(norm.getText())
+print()
+
+newMat = norm.convertToMatrix()
+print(newMat.getText())
+print()
+
+
+"""
 width = 64
 height = 36
 trainCount = 10
@@ -80,7 +96,7 @@ for i in range(trainCount):
 
 vidNet.save("vidNet")
 processFromFolder(vidNet, trainFolder + " (train_data)/grayInput/", afterPath, width, height)
-
+"""
 
 #
 PRINT_EXTRA = False
