@@ -3,7 +3,7 @@ from ImageManip.MakeImages import *
 import shutil
 
 
-def folderToInOutImages(width, height, source, folder):
+def folderToInOutImages(inSize, outSize, source, folder):
     """
     Take all the images in a folder and generate training data images for all images in the given source.
     The data is split into two folders, one is the gray scale input, in a folder called grayInput.
@@ -11,8 +11,10 @@ def folderToInOutImages(width, height, source, folder):
     All images will be the same aspect ratio as the originals, adding black bars to the sides or top
         if extra space needs to be filled.
     All images will be the same number of pixels in width and height.
-    :param width: The number of pixels in the width of the output images, must be a positive integer > 0
-    :param height: The number of pixels in the height of the output images, must be a positive integer > 0
+    :param inSize: A tuple of (width, height) for the number of pixels in the width and height of the input images
+            must be a positive integer > 0
+    :param outSize: A tuple of (width, height) for the number of pixels in the width and height of the output images
+            must be a positive integer > 0
     :param source: The path to the folder containing all images. The folder must only contain images.
         The folder is relative to the images directory
         or
@@ -55,7 +57,7 @@ def folderToInOutImages(width, height, source, folder):
             num = "0" + num
 
         # create the color image
-        i = scaleImage(width, height, i)
+        i = scaleImage(outSize[0], outSize[1], i)
         # save the color image
         i.save(colorPath + "color" + num + ".png", "PNG")
         if Settings.IMG_PRINT_STATUS:
@@ -63,6 +65,8 @@ def folderToInOutImages(width, height, source, folder):
 
         # create the gray image
         i = convertGrayScale(i)
+        # resize the image
+        i = scaleImage(inSize[0], inSize[1], i)
         # save the gray image
         i.save(grayPath + "gray" + num + ".png", "PNG")
         if Settings.IMG_PRINT_STATUS:
@@ -103,15 +107,24 @@ def dataFromFolders(path):
     return data
 
 
-# take the video file at the given path and create a folder of images for input data,
-#   and a folder of images for output data
-# also returns the training data as a tuple
-# path: the folder path containing the video file, relative to images
-# name: the file name of the video, excluding file extension, must be .mov
-# see MakeImages.videoToImages for extra parameters description
-def splitVideoToInOutImages(path, name, size=None, skip=1, start=0, end=1, frameRange=False):
+def splitVideoToInOutImages(path, name, sizes=(None, None), skip=1, start=0, end=1, frameRange=False):
+    """
+    Take the video file at the given path and create a folder of images for input data,
+        and a folder of images for output data.
+    :param path: The folder path containing the video file, relative to images
+    :param name: The file name of the video, excluding file extension, must be .mov
+    :param sizes: A tuple of two tuples, each in the form of (width, height) for the number of pixels in images.
+            The 0 index is the input image size, the 1 index is the output image size
+    :param skip: Skip every this many frames, default 1, meaning skip no frames
+    :param start: The percentage in range [0, 1] of the starting point in the video to produce images, must be < end
+    :param end: The percentage in range [0, 1] of th end point in the video tp produce images, must be > start
+            can also use integers for start and end along with the flag frameRange set to true to use a range of frames for
+            start and end.
+    :param frameRange: True to make start and end act as frame ranges, False to make them act as percentage ranges
+    :return: The training data as a tuple
+    """
     # create a folder with each frame of the video, and store the path
-    splitPath = splitVideo(path, name, size, skip, start, end, frameRange)
+    splitPath = splitVideo(path, name, sizes[0], skip, start, end, frameRange)
     # determine the new path name for where each folder will be saved
     trainingDataPath = path + name + " (train_data)/"
 
@@ -120,7 +133,7 @@ def splitVideoToInOutImages(path, name, size=None, skip=1, start=0, end=1, frame
         mkdir("images/" + trainingDataPath)
 
     # get training data from the split frames and convert them to images
-    folderToInOutImages(size[0], size[1], splitPath, trainingDataPath)
+    folderToInOutImages(sizes[0], sizes[1], splitPath, trainingDataPath)
 
     # delete the folder from the initial video file split
     shutil.rmtree(splitPath)
@@ -142,13 +155,15 @@ def trainOnFolder(net, path, times=1):
         net.train(data)
 
 
-# using the given Network, calculate and save images for each image in the given path
-# net: the Network to process the images
-# path: a folder, relative to images, of the gray scale images to use for input
-# outPath: a folder, relative to images, to where each image should be saved
-# width: the width of the images that the Network processes
-# height: the height of the images that the Network processes
-def processFromFolder(net, path, outPath, width, height):
+def processFromFolder(net, path, outPath, inSize, outSize):
+    """
+    Using the given Network, calculate and save images for each image in the given path
+    :param net: The Network to process the images
+    :param path: A folder, relative to images, of the gray scale images to use for input
+    :param outPath: A folder, relative to images, to where each image should be saved
+    :param inSize: A tuple of (width, height) of the size of images that the Network processes
+    :param outSize: A tuple of (width, height) of the size of images that the Network outputs
+    """
     # load in all gray scale images
     path = "images/" + path
     data = [f for f in listdir(path)]
@@ -157,7 +172,7 @@ def processFromFolder(net, path, outPath, width, height):
         data[i] = Image.open(path + data[i])
 
         # resize appropriately
-        data[i] = scaleImage(width, height, data[i])
+        data[i] = scaleImage(inSize[0], inSize[1], data[i])
 
         # convert to data
         data[i] = grayImageToData(data[i])
@@ -165,7 +180,7 @@ def processFromFolder(net, path, outPath, width, height):
     # determine and save all images
     for i, d in enumerate(data):
         # get the output data of the Network
-        img = dataToImage(net.calculateInputs(d), width, height)
+        img = dataToImage(net.calculateInputs(d), outSize[0], outSize[1])
         # save the output data as an image
         img.save(outPath + "output " + str(i) + ".png", "PNG")
 
@@ -206,18 +221,15 @@ def colorImageToData(img):
 # take a gray scale PIL image and convert it to input training data
 # this method assumes all 3 color channels have the same value
 def grayImageToData(img):
-    inData = []
     # get the pixels
     pixels = img.load()
     width, height = img.size
-    # go through each pixel and add the data for the gray
-    for x in range(width):
-        for y in range(height):
-            # assume all channels are the same value, so just take the red value
-            inData.append(pixels[x, y][0] / 256.0)
 
-    # return the input data
-    return inData
+    # return the input data, getting every pixel in each column, then each row
+    if img.mode == "L":
+        return [pixels[x, y] / 256.0 for x in range(width) for y in range(height)]
+    else:
+        return [pixels[x, y][0] / 256.0 for x in range(width) for y in range(height)]
 
 
 # get a PIL image from the given list of data

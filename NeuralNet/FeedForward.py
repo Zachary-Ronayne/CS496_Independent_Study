@@ -775,17 +775,17 @@ def combineList(list1, list2):
             list1[i] += list2[i]
 
 
-def makeImageNetwork(width, height, hidden, matrixNet=True):
+def makeImageNetwork(inSize, outSize, hidden, matrixNet=True):
     """
     Create and return a Network made for taking input and output images of the specified size
-    :param width: The width of the images the Network should handle
-    :param height: The height of the images the Network should handle
+    :param inSize: A tuple of (width, height) for the pixel size of input images
+    :param outSize: A tuple of (width, height) for the pixel size of output images
     :param hidden: The list of numbers of nodes in hidden layers
     :param matrixNet: True to create a Matrix network, False to create an object oriented one, default True
     :return: The corresponding Network
     """
-    hidden.insert(0, width * height)
-    hidden.append(width * height * 3)
+    hidden.insert(0, inSize[0] * inSize[1])
+    hidden.append(outSize[0] * outSize[1] * 3)
 
     if matrixNet:
         return MatrixNetwork(hidden)

@@ -89,7 +89,7 @@ def splitVideo(videoPath, videoName, size=None, skip=1, start=0, end=1, frameRan
 
 # get a list of Pillow images from a video file
 # videoPath: the folder with the video file, will be relative to images
-# videoName: the name of the video file, excluding file extention, must be .mov
+# videoName: the name of the video file, excluding file extension, must be .mov
 # returns: a list of all the images
 # see videoToImages for extra parameter descriptions
 def videoToPillowImages(videoPath, videoName, size=None, skip=1, start=0, end=1, frameRange=False):
