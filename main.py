@@ -3,16 +3,6 @@
 TODO
 
 
-Try getting it to work with the MNIST dataset
-
-1. Make thing to show percent correct for training, then testing
-
-2. Make thing to take and process one image of a hand written digit, also handle resizing
-
-Clean up code
-
-
-
 Back propagation
 
 For some reason, all images are always the same?
@@ -37,6 +27,16 @@ Add option to TrainingData.scaleImage for resizing based on adding black bars, o
 
 
 
+
+MNIST:
+
+Add options to modify each data entry by shifting each image up, down, left, or right a set number of pixels.
+    This allows for more data
+Add options to generate random noise on the data. This allows even more data elements
+
+
+
+
 Bugs:
 
 Sometimes when images are loaded in MakeImages.videoToPillowImages, they are in the wrong color format,
@@ -45,7 +45,6 @@ Sometimes when images are loaded in MakeImages.videoToPillowImages, they are in 
 Overflow in FeedForward.sigmoid(x)
 
 When not using the exact same aspect ratio, input and output images of different sizes don't work
-
 
 
 
@@ -64,21 +63,27 @@ import random
 
 from NeuralNet.MNIST import *
 
-mnistPath = "Z:/MNIST dataset/digits/training"
-numData = openData(mnistPath, 100)
+trainCount = 0
+training = "Z:/MNIST dataset/digits/training"
+testing = "Z:/MNIST dataset/digits/testing"
 
-# mnistNet = getMnistNetwork([20, 20])
-# mnistNet.random()
-mnistNet = MatrixNetwork([])
+mnistNet = getMnistNetwork([40, 30, 20])
 mnistNet.load("MNIST")
 
-mnistNet.train(numData, shuffle=True, split=10, times=200)
-
-for d in numData:
-    outs = mnistNet.calculateInputs(d[0])
-    print(str(chooseOutput(outs)) + " " + str(d[1]))
+if not trainCount == 0:
+    trainData = openData(training, 10000, rand=True)
+    testData = openData(testing, 100, rand=True)
+    for i in range(trainCount):
+        mnistNet.train(trainData, shuffle=True, split=10, times=1)
+        print("(" + str(i) + ") Train correct: " + str(processData(mnistNet, trainData)) + "%")
+        print("(" + str(i) + ") Test correct:  " + str(processData(mnistNet, testData)) + "%")
+        print()
 
 mnistNet.save("MNIST")
+
+imgFile = "Z:/MNIST dataset/num.png"
+print(processHandWritten(mnistNet, imgFile))
+
 
 """
 inSize = (32, 18)
