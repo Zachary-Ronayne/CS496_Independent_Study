@@ -11,7 +11,7 @@ NET_MAX_BIAS = 2
 
 # the rate at which changes are made in the backpropagation algorithm, larger values mean larger steps
 #   meaning less precise training, but faster training
-NET_PROPAGATION_RATE = .01
+NET_PROPAGATION_RATE = .1
 
 
 # Image manipulation settings

@@ -1,6 +1,5 @@
 # A file for handling loading in and processing the MNIST dataset with a neural network
 
-from os.path import isfile, join
 from os import listdir
 
 from PIL import Image

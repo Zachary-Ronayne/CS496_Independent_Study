@@ -16,6 +16,7 @@ Network
 Make a class extending Network, specifically with extra functionality for processing images and saving things
     like height and width
 
+Add option for calling a function when looping through each training time in the Network train methods
 
 
 
@@ -63,7 +64,7 @@ import random
 
 from NeuralNet.MNIST import *
 
-trainCount = 0
+trainCount = 10
 training = "Z:/MNIST dataset/digits/training"
 testing = "Z:/MNIST dataset/digits/testing"
 
