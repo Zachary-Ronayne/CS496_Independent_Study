@@ -3,7 +3,7 @@ from ImageManip.MakeImages import *
 import shutil
 
 
-def folderToInOutImages(inSize, outSize, source, folder):
+def folderToInOutImages(inSize, outSize, source, folder, bars=True):
     """
     Take all the images in a folder and generate training data images for all images in the given source.
     The data is split into two folders, one is the gray scale input, in a folder called grayInput.
@@ -20,7 +20,8 @@ def folderToInOutImages(inSize, outSize, source, folder):
         or
         a list of Pillow images to convert
     :param folder: The folder to save the images to, relative to images
-    :return:
+    :param bars: True if images of differing aspect ratios should apply black bars to fill the space,
+        False to stretch the image. Default True
     """
     # direct the folder to the images folder
     folder = "images/" + folder + "/"
@@ -66,7 +67,7 @@ def folderToInOutImages(inSize, outSize, source, folder):
         # create the gray image
         i = convertGrayScale(i)
         # resize the image
-        i = scaleImage(inSize[0], inSize[1], i)
+        i = scaleImage(inSize[0], inSize[1], i, bars=bars)
         # save the gray image
         i.save(grayPath + "gray" + num + ".png", "PNG")
         if Settings.IMG_PRINT_STATUS:
@@ -107,7 +108,7 @@ def dataFromFolders(path):
     return data
 
 
-def splitVideoToInOutImages(path, name, sizes=(None, None), skip=1, start=0, end=1, frameRange=False):
+def splitVideoToInOutImages(path, name, sizes=(None, None), skip=1, start=0, end=1, frameRange=False, bars=True):
     """
     Take the video file at the given path and create a folder of images for input data,
         and a folder of images for output data.
@@ -121,10 +122,12 @@ def splitVideoToInOutImages(path, name, sizes=(None, None), skip=1, start=0, end
             can also use integers for start and end along with the flag frameRange set to true to use a range of frames for
             start and end.
     :param frameRange: True to make start and end act as frame ranges, False to make them act as percentage ranges
+    :param bars: True if images of differing aspect ratios should apply black bars to fill the space,
+        False to stretch the image. Default True
     :return: The training data as a tuple
     """
     # create a folder with each frame of the video, and store the path
-    splitPath = splitVideo(path, name, sizes[0], skip, start, end, frameRange)
+    splitPath = splitVideo(path, name, sizes[1], skip, start, end, frameRange, bars=bars)
     # determine the new path name for where each folder will be saved
     trainingDataPath = path + name + " (train_data)/"
 
@@ -133,7 +136,7 @@ def splitVideoToInOutImages(path, name, sizes=(None, None), skip=1, start=0, end
         mkdir("images/" + trainingDataPath)
 
     # get training data from the split frames and convert them to images
-    folderToInOutImages(sizes[0], sizes[1], splitPath, trainingDataPath)
+    folderToInOutImages(sizes[0], sizes[1], splitPath, trainingDataPath, bars=bars)
 
     # delete the folder from the initial video file split
     shutil.rmtree(splitPath)

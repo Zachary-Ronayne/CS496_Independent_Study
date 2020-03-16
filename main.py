@@ -3,7 +3,12 @@
 TODO
 
 
-Back propagation
+Attempt to speed up, this video acts as an introduction: https://www.youtube.com/watch?v=dPQnFXD7DxM
+    This will involve making lots of helper methods that the library can use
+
+
+
+Back propagation:
 
 For some reason, all images are always the same?
 Add test cases for new methods
@@ -11,20 +16,10 @@ Allow the MatrixNetwork to use the max and min values for weight and bias
 Try adding multiple options for cost functions
 
 
-Network
 
-Make a class extending Network, specifically with extra functionality for processing images and saving things
-    like height and width
+Image manipulation:
 
-Add option for calling a function when looping through each training time in the Network train methods
-
-
-
-Image manipulation
-
-Fix splitVideoToInOutImages resizing smaller images to big images
 Make GUI and commandline program for image manipulation
-Add option to TrainingData.scaleImage for resizing based on adding black bars, or stretching
 
 
 
@@ -59,17 +54,47 @@ Add a way to create a random neural network from a seed
 
 
 import NeuralNet.FeedForward as Net
+import NeuralNet.ImageNetwork as ImgNet
 from ImageManip.ColorSquares import *
 import random
 
 from NeuralNet.MNIST import *
 
-trainCount = 10
+
+inSize = (32, 32)
+outSize = (32, 18)
+trainCount = 100
+dataSplit = 40
+trainFolder = "training"
+afterPath = "images/after/"
+loadNet = True
+splitVideoFile = False
+
+if splitVideoFile:
+    splitVideoToInOutImages("", trainFolder, (inSize, outSize), skip=10, bars=False)
+vidData = dataFromFolders(trainFolder + " (train_data)/")
+
+if loadNet:
+    vidNet = Net.MatrixNetwork([])
+    vidNet.load("vidNet")
+else:
+    vidNet = ImgNet.ImageNet(inSize, outSize, [100, 100])
+    vidNet.random()
+
+vidNet.train(vidData, shuffle=True, split=dataSplit, times=trainCount,
+             func=(lambda t, s: print("training time " + str(t) + " subset " + str(s))))
+
+vidNet.save("vidNet")
+processFromFolder(vidNet, trainFolder + " (train_data)/grayInput/", afterPath, inSize, outSize)
+
+
+"""
+trainCount = 0
 training = "Z:/MNIST dataset/digits/training"
 testing = "Z:/MNIST dataset/digits/testing"
 
-mnistNet = getMnistNetwork([40, 30, 20])
-mnistNet.load("MNIST")
+mnistNet = getMnistNetwork([140, 100, 80, 60,  50])
+mnistNet.load("MIST6")
 
 if not trainCount == 0:
     trainData = openData(training, 10000, rand=True)
@@ -80,45 +105,13 @@ if not trainCount == 0:
         print("(" + str(i) + ") Test correct:  " + str(processData(mnistNet, testData)) + "%")
         print()
 
-mnistNet.save("MNIST")
+mnistNet.save("MIST6")
 
 imgFile = "Z:/MNIST dataset/num.png"
 print(processHandWritten(mnistNet, imgFile))
-
-
-"""
-inSize = (32, 18)
-outSize = (64, 36)
-trainCount = 100
-dataSplit = 40
-trainFolder = "training"
-afterPath = "images/after/"
-loadNet = True
-splitVideoFile = False
-
-if splitVideoFile:
-    splitVideoToInOutImages("", trainFolder, (inSize, outSize), skip=1)
-vidData = dataFromFolders(trainFolder + " (train_data)/")
-
-if loadNet:
-    vidNet = Net.MatrixNetwork([])
-    vidNet.load("vidNet")
-else:
-    vidNet = Net.makeImageNetwork(inSize, outSize, [100, 100], matrixNet=True)
-    vidNet.random()
-
-for i in range(trainCount):
-    random.shuffle(vidData)
-    split = dataSubSet(vidData, dataSplit)
-    for j, s in enumerate(split):
-        print("training time " + str(i) + " subset " + str(j))
-        vidNet.train(s)
-
-vidNet.save("vidNet")
-processFromFolder(vidNet, trainFolder + " (train_data)/grayInput/", afterPath, inSize, outSize)
 """
 
-#
+"""
 PRINT_EXTRA = False
 TRAIN_COUNT = 2000
 
@@ -130,15 +123,12 @@ data = [
     ([.5, 1, 1.8, 2.8], [.8, .4]),
     ([.2, .8, 1.6, 2], [.85, .43]),
 ]
-"""
 data = [
     ([1, 1, 1, 1], [.5, .5]),
     ([.5, .5, .5, .5], [.25, .25]),
     ([.51, .51, .51, .51], [.26, .26]),
     ([.1, .1, .1, .1], [.05, .05]),
 ]
-
-"""
 
 
 def printData(net):
@@ -203,3 +193,5 @@ def testTraining():
 
 
 # testTraining()
+
+"""

@@ -574,12 +574,15 @@ class MatrixNetwork:
         Apply the given gradient to the weights and biases
         :param gradient: The gradient to apply
         """
-        # go through all the bias and weight changes, and apply them
-        for i in range(len(self.biases)):
-            self.weights[i] = self.weights[i] - gradient[0][i]
-            self.biases[i] = self.biases[i] - gradient[1][i]
+        # go through all the bias and weight changes, and apply them,
+        # decreasing the change as they get closer to the front layer.
+        size = len(self.biases)
+        for i in range(size):
+            factor = float(i + 1) / float(size)
+            self.weights[i] = self.weights[i] - gradient[0][i] * factor
+            self.biases[i] = self.biases[i] - gradient[1][i] * factor
 
-    def train(self, data, shuffle=False, split=1, times=1):
+    def train(self, data, shuffle=False, split=1, times=1, func=None):
         """
         Take the given data train the Network with it.
         :param data: The training data. Can be a single tuple containing the input and then the outputs
@@ -587,6 +590,8 @@ class MatrixNetwork:
         :param shuffle: True to shuffle data each time the training loops, False otherwise
         :param split: Split the training data into subsets of this size.
         :param times: Train on the data this number of times
+        :param func: A function that will be called each time a training interval is finished.
+            Must accept two int params. First is the training times count, the second is the split count
         """
         # if the data is not already a list of lists, put it in a list
         if isinstance(data, tuple):
@@ -601,7 +606,7 @@ class MatrixNetwork:
             if shuffle:
                 random.shuffle(data)
             # go through each subset of data of data
-            for dat in data:
+            for s, dat in enumerate(data):
                 # variable to keep track of all the gradient values
                 gradientTotal = (
                     [np.zeros(w.shape) for w in self.weights],
@@ -620,6 +625,10 @@ class MatrixNetwork:
 
                 # apply the final gradient
                 self.applyGradient(gradientTotal)
+
+                # call the extra function
+                if func is not None:
+                    func(t, s)
 
     def random(self):
         """
@@ -731,31 +740,52 @@ class MatrixNetwork:
         return newNet
 
 
-# get the value of the mathematical function sigmoid for x, return values are always in the range (0, 1)
 def sigmoid(x):
+    """
+    Get the value of the mathematical function sigmoid for x,
+    :param x: The value to take the sigmoid of
+    :return: The sigmoid of x, always in the range (0, 1)
+    """
     return 1.0 / (1.0 + np.power(math.e, -x))
 
 
-# get the value of the derivative of the mathematical function sigmoid for x
 def dSigmoid(x):
+    """
+    Get the value of the derivative of the mathematical function sigmoid for x.
+    :param x: The value to take the sigmoid derivative of
+    :return: The derivative of the sigmoid function at x
+    """
     sig = sigmoid(x)
     return sig - sig * sig
 
 
 def costDerivative(actual, expected):
+    """
+    Determine the cost for the given value and the expected value
+    :param actual: The value calculated
+    :param expected: The value desired
+    :return: The cost
+    """
     return 2 * (actual - expected)
 
 
-# utility function to seed the random number generator
 def seed():
+    """
+    Utility function to seed the random number generator
+    TODO redo the random stuff so that this function is not needed
+    """
     random.seed(time.time() + random.uniform(0, 1))
 
 
-# utility function for taking the average of all values by the given count
-# take all the values in the list
-# if the value is a number, divide it my count
-# if the value is a list, recursively call this method
 def averageList(values, count):
+    """
+    Utility function for taking the average of all values by the given count.
+    Take all the values in the list.
+    If the value is a number, divide it my count.
+    If the value is a list, recursively call this method.
+    :param values: The list of values to take the average of
+    :param count: The total number of elements, used for taking the average
+    """
     for i in range(len(values)):
         if isinstance(values[i], list):
             averageList(values[i], count)
@@ -763,11 +793,15 @@ def averageList(values, count):
             values[i] /= count
 
 
-# utility function to combine numbers in lists of the same size
-# combine the numbers in the lists
-# if the values in list1 are a list, then recursively call this function
-# if the values are a number, combine them from list 2
 def combineList(list1, list2):
+    """
+    Utility function to combine numbers in lists of the same size.
+    Combine the numbers in the lists.
+
+    :param list1: If the values in this are a list, then recursively call this function.
+        If the values are a number, add the values in list2 to this list.
+    :param list2: The second list
+    """
     for i in range(len(list1)):
         if isinstance(list1[i], list):
             combineList(list1[i], list2[i])

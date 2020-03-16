@@ -10,6 +10,7 @@ from NeuralNet.FeedForward import *
 
 import Settings
 
+
 # The size, in pixels of an MNIST dataset image
 MNIST_SIZE = 28
 
