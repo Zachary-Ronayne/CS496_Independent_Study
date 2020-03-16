@@ -1,17 +1,11 @@
 
-images/test2.mov
-.idea/CS Independent study.iml
-.idea/dictionaries/zrona.xml
-.idea/inspectionProfiles/Project_Default.xml
-.idea/misc.xml
-.idea/modules.xml
-.idea/workspace.xml
+.idea/
 __pycache__/main.cpython-37.pyc
 __pycache__/Settings.cpython-37.pyc
 ImageManip/__pycache__/MakeImages.cpython-37.pyc
 ImageManip/__pycache__/TrainingData.cpython-37.pyc
 NeuralNet/__pycache__/FeedForward.cpython-37.pyc
 venv/
+saves/
+images/
 .idea/vcs.xml
-saves/test.txt
-images/training.mov
