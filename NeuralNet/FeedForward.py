@@ -4,7 +4,6 @@ import Settings
 
 from ImageManip.TrainingData import dataSubSet
 
-import math
 import time
 import random
 
@@ -371,7 +370,6 @@ class Node:
 
     # randomly generate a value for every connection in the Node and its bias
     def random(self):
-        seed()
         self.bias = random.uniform(-Settings.NET_MAX_BIAS, Settings.NET_MAX_BIAS)
 
         for c in self.connections:
@@ -427,7 +425,6 @@ class Connection:
 
     # randomly generate a value for the weight of this connection
     def random(self):
-        seed()
         self.weight = random.uniform(-Settings.NET_MAX_WEIGHT, Settings.NET_MAX_WEIGHT)
 
     # get a text representation of this connection
@@ -535,7 +532,8 @@ class MatrixNetwork:
         # calculate the first part of the derivatives, which will also be the bias values
         # this is the cost derivative part, based on the expected outputs,
         #   and the derivative of the sigmoid with the zActivation
-        baseDerivatives = costDerivative(activations[-1], expected) * dSigmoid(zActivations[-1])
+        baseDerivatives = costDerivative(activations[-1], expected, dSigmoid(zActivations[-1]),
+                                         Settings.ACTIVATION_FUNC)
         # set the last element in the bias gradient to the initial base derivative
         bGradient[-1] = baseDerivatives
 
@@ -746,7 +744,7 @@ def sigmoid(x):
     :param x: The value to take the sigmoid of
     :return: The sigmoid of x, always in the range (0, 1)
     """
-    return 1.0 / (1.0 + np.power(math.e, -x))
+    return 1.0 / (1.0 + np.power(np.e, -x))
 
 
 def dSigmoid(x):
@@ -759,22 +757,26 @@ def dSigmoid(x):
     return sig - sig * sig
 
 
-def costDerivative(actual, expected):
+def costDerivative(actual, expected, zActivation, func="quadratic"):
     """
     Determine the cost for the given value and the expected value
     :param actual: The value calculated
     :param expected: The value desired
+    :param zActivation: The zActivation value associated with the given actual and expected values
+    :param func: The type of cost function to use for backpropagation.
+        Note that the names are based on their associated cost functions, but this method calculates their derivatives,
+        not the actual cost.
+        Valid values: quadratic, entropy.
+        Default quadratic
     :return: The cost
     """
-    return 2 * (actual - expected)
-
-
-def seed():
-    """
-    Utility function to seed the random number generator
-    TODO redo the random stuff so that this function is not needed
-    """
-    random.seed(time.time() + random.uniform(0, 1))
+    if func == "quadratic":
+        return 2 * (actual - expected) * zActivation
+    elif func == "entropy":
+        return actual - expected
+    else:
+        raise Exception("Invalid func type \"" + str(func) + "\"\n"
+                        "Valid types: quadratic, entropy, cubic")
 
 
 def averageList(values, count):

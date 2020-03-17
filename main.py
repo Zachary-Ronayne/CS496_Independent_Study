@@ -11,9 +11,11 @@ Attempt to speed up, this video acts as an introduction: https://www.youtube.com
 Back propagation:
 
 For some reason, all images are always the same?
+    Why?
 Add test cases for new methods
-Allow the MatrixNetwork to use the max and min values for weight and bias
-Try adding multiple options for cost functions
+Add multiple activation functions
+Try implementing regularization to the cost function, this is to avoid over fitting
+Try implementing dropout, basically re-randomizing a small number of nodes
 
 
 
@@ -29,7 +31,7 @@ MNIST:
 Add options to modify each data entry by shifting each image up, down, left, or right a set number of pixels.
     This allows for more data
 Add options to generate random noise on the data. This allows even more data elements
-
+Add options to rotate the images by small amounts for an increased dataset
 
 
 
@@ -37,10 +39,10 @@ Bugs:
 
 Sometimes when images are loaded in MakeImages.videoToPillowImages, they are in the wrong color format,
     need to figure out places where it needs to be converted
+    Fixed? Need to verify
 
 Overflow in FeedForward.sigmoid(x)
 
-When not using the exact same aspect ratio, input and output images of different sizes don't work
 
 
 
@@ -61,24 +63,24 @@ import random
 from NeuralNet.MNIST import *
 
 
-inSize = (32, 32)
-outSize = (32, 18)
-trainCount = 100
+inSize = (160, 90)
+outSize = (160, 90)
+trainCount = 10
 dataSplit = 40
-trainFolder = "training"
+trainFolder = "training2"
 afterPath = "images/after/"
 loadNet = True
 splitVideoFile = False
 
 if splitVideoFile:
-    splitVideoToInOutImages("", trainFolder, (inSize, outSize), skip=10, bars=False)
+    splitVideoToInOutImages("", trainFolder, (inSize, outSize), skip=1, bars=False)
 vidData = dataFromFolders(trainFolder + " (train_data)/")
 
 if loadNet:
     vidNet = Net.MatrixNetwork([])
     vidNet.load("vidNet")
 else:
-    vidNet = ImgNet.ImageNet(inSize, outSize, [100, 100])
+    vidNet = ImgNet.ImageNet(inSize, outSize, [100, 100, 100, 100, 100])
     vidNet.random()
 
 vidNet.train(vidData, shuffle=True, split=dataSplit, times=trainCount,
@@ -89,12 +91,12 @@ processFromFolder(vidNet, trainFolder + " (train_data)/grayInput/", afterPath, i
 
 
 """
-trainCount = 0
+trainCount = 50
 training = "Z:/MNIST dataset/digits/training"
 testing = "Z:/MNIST dataset/digits/testing"
 
-mnistNet = getMnistNetwork([140, 100, 80, 60,  50])
-mnistNet.load("MIST6")
+mnistNet = getMnistNetwork([50, 40, 30])
+mnistNet.load("MIST5")
 
 if not trainCount == 0:
     trainData = openData(training, 10000, rand=True)
@@ -105,7 +107,7 @@ if not trainCount == 0:
         print("(" + str(i) + ") Test correct:  " + str(processData(mnistNet, testData)) + "%")
         print()
 
-mnistNet.save("MIST6")
+mnistNet.save("MIST5")
 
 imgFile = "Z:/MNIST dataset/num.png"
 print(processHandWritten(mnistNet, imgFile))

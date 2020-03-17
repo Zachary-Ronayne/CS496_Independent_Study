@@ -13,6 +13,9 @@ NET_MAX_BIAS = 2
 #   meaning less precise training, but faster training
 NET_PROPAGATION_RATE = .1
 
+# The activation function used for backpropagation
+ACTIVATION_FUNC = "entropy"
+
 
 # Image manipulation settings
 
