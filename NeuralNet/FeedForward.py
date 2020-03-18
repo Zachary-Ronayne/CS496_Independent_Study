@@ -92,7 +92,7 @@ class Network:
         baseDerivatives = []
         for j, n in enumerate(self.layers[-1].nodes):
             # find the derivative value for the first 2 terms
-            derivative = dSigmoid(n.zActivation) * costDerivative(n.activation, expected[j])
+            derivative = costDerivative(n.activation, expected[j], n.zActivation)
             # add the derivative to the baseDerivatives list
             baseDerivatives.append(derivative)
             # the bias values get the same derivative, so add it to that list also
@@ -567,17 +567,21 @@ class MatrixNetwork:
         # return the final tuple of weight and bias gradients
         return wGradient, bGradient
 
-    def applyGradient(self, gradient):
+    def applyGradient(self, gradient, dataSize):
         """
         Apply the given gradient to the weights and biases
         :param gradient: The gradient to apply
+        :param dataSize: The size of data in the gradient
         """
         # go through all the bias and weight changes, and apply them,
         # decreasing the change as they get closer to the front layer.
         size = len(self.biases)
         for i in range(size):
             factor = float(i + 1) / float(size)
-            self.weights[i] = self.weights[i] - gradient[0][i] * factor
+            # TODO consider putting the regularization code in backpropagation, not here
+            self.weights[i] = self.weights[i] * (1 - Settings.REGULARIZATION_CONSTANT / dataSize)\
+                              - gradient[0][i] * factor
+
             self.biases[i] = self.biases[i] - gradient[1][i] * factor
 
     def train(self, data, shuffle=False, split=1, times=1, func=None):
@@ -616,13 +620,13 @@ class MatrixNetwork:
                     gradient = self.backpropagate(d[0], d[1])
 
                     # add the gradient from the current backpropagation call to the total gradient
-                    # accounting for averages and leanring rate
+                    # accounting for averages and learning rate
                     for i in range(len(gradient[0])):
                         gradientTotal[0][i] += gradient[0][i] * Settings.NET_PROPAGATION_RATE / len(dat)
                         gradientTotal[1][i] += gradient[1][i] * Settings.NET_PROPAGATION_RATE / len(dat)
 
                 # apply the final gradient
-                self.applyGradient(gradientTotal)
+                self.applyGradient(gradientTotal, len(dat))
 
                 # call the extra function
                 if func is not None:
@@ -640,11 +644,12 @@ class MatrixNetwork:
             # go through each weight and bias going into each node of the layer
             for i in range(len(self.biases[k])):
                 # randomly change the bias
-                self.biases[k][i] = random.uniform(-Settings.NET_MAX_BIAS, Settings.NET_MAX_BIAS)
+                self.biases[k][i] = np.float64(random.uniform(-Settings.NET_MAX_BIAS, Settings.NET_MAX_BIAS))
                 # go through each weight going into each specific node
                 for j in range(len(self.weights[k][i])):
                     # randomly change the weight
-                    self.weights[k][i, j] = random.uniform(-Settings.NET_MAX_WEIGHT, Settings.NET_MAX_WEIGHT)
+                    self.weights[k][i, j] = np.float64(random.uniform(
+                        -Settings.NET_MAX_WEIGHT, Settings.NET_MAX_WEIGHT))
 
     def save(self, name):
         """
@@ -744,6 +749,13 @@ def sigmoid(x):
     :param x: The value to take the sigmoid of
     :return: The sigmoid of x, always in the range (0, 1)
     """
+
+    # make sure all values are within valid range for sigmoid to not overflow
+    #   this is to ensure that, if the value of np.power(np.e, -x), no overflow happens, and if it does,
+    #   then the expected value would be close enough to 0 or 1 to simply be that value
+    np.clip(x, a_min=-700, a_max=700, out=x)
+
+    # return the result
     return 1.0 / (1.0 + np.power(np.e, -x))
 
 

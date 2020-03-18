@@ -12,15 +12,28 @@ Back propagation:
 
 For some reason, all images are always the same?
     Why?
+Add multiple activation functions, ray loo (is that how it's spelled?), and tanh (modified sigmoid in range [-1, 1])
+Implement regularization techniques:
+    Using absolute value of weights for the addition to cost function, rather than the square of the weights
+        Shrink weights by a constant amount, rather than based on their current weight
+    Try implementing dropout, basically re-randomizing a small number of nodes
+    Or, ignore randomly half the hidden nodes, then run the training through that, then do it again on
+        random nodes, essentially only thinking about how some nodes effect the output at a time.
+        Also remember to half the weights to account for twice as many weights being used
+Apply better initialization, device each weight by the number of nodes in it's layer
+Add option to not change training rate for different layers, maybe add an option to reverse it
+Add learning rate scheduling, so as more training times happen, the learning rate goes down
 Add test cases for new methods
-Add multiple activation functions
-Try implementing regularization to the cost function, this is to avoid over fitting
-Try implementing dropout, basically re-randomizing a small number of nodes
+
 
 
 
 Image manipulation:
 
+Try adding noise to input images, which also produce the same color output, artificially increase dataset
+    Can also vertically and or horizontally flip images to increase dataset
+Make a way to apply a small, say 28x28, image filter that goes along each 28x28 section of an image
+    to train and process those parts of the image, maybe also have sections overlap and take averages
 Make GUI and commandline program for image manipulation
 
 
@@ -40,8 +53,6 @@ Bugs:
 Sometimes when images are loaded in MakeImages.videoToPillowImages, they are in the wrong color format,
     need to figure out places where it needs to be converted
     Fixed? Need to verify
-
-Overflow in FeedForward.sigmoid(x)
 
 
 
@@ -63,8 +74,8 @@ import random
 from NeuralNet.MNIST import *
 
 
-inSize = (160, 90)
-outSize = (160, 90)
+inSize = (32, 18)
+outSize = (32, 18)
 trainCount = 10
 dataSplit = 40
 trainFolder = "training2"
@@ -80,7 +91,7 @@ if loadNet:
     vidNet = Net.MatrixNetwork([])
     vidNet.load("vidNet")
 else:
-    vidNet = ImgNet.ImageNet(inSize, outSize, [100, 100, 100, 100, 100])
+    vidNet = ImgNet.ImageNet(inSize, outSize, [1500, 1500])
     vidNet.random()
 
 vidNet.train(vidData, shuffle=True, split=dataSplit, times=trainCount,
