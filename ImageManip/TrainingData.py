@@ -84,6 +84,9 @@ def folderToInOutImages(inSize, outSize, source, folder, bars=True):
 # the images in the folders should only contain the training data and no other folders or files
 # path: the path to the two folders, relative to images
 def dataFromFolders(path):
+    # ensure that the saves folder exists
+    createImages()
+
     # determine folder paths
     path = "images/" + path
     grayPath = path + "grayInput/"
@@ -126,6 +129,10 @@ def splitVideoToInOutImages(path, name, sizes=(None, None), skip=1, start=0, end
         False to stretch the image. Default True
     :return: The training data as a tuple
     """
+
+    # ensure that the saves folder exists
+    createImages()
+
     # create a folder with each frame of the video, and store the path
     splitPath = splitVideo(path, name, sizes[1], skip, start, end, frameRange, bars=bars)
     # determine the new path name for where each folder will be saved
@@ -167,6 +174,10 @@ def processFromFolder(net, path, outPath, inSize, outSize):
     :param inSize: A tuple of (width, height) of the size of images that the Network processes
     :param outSize: A tuple of (width, height) of the size of images that the Network outputs
     """
+
+    # ensure that the saves folder exists
+    createImages()
+
     # load in all gray scale images
     path = "images/" + path
     data = [f for f in listdir(path)]
@@ -186,6 +197,14 @@ def processFromFolder(net, path, outPath, inSize, outSize):
         img = dataToImage(net.calculateInputs(d), outSize[0], outSize[1])
         # save the output data as an image
         img.save(outPath + "output " + str(i) + ".png", "PNG")
+
+
+def createImages():
+    """
+    Create the directory for the images folder if one doesn't exist
+    """
+    if not isdir("images"):
+        mkdir("images")
 
 
 # take a PIL image and return a tuple of input and output data for an image Neural Network

@@ -11,13 +11,13 @@ NET_MAX_BIAS = 2
 
 # the rate at which changes are made in the backpropagation algorithm, larger values mean larger steps
 #   meaning less precise training, but faster training
-NET_PROPAGATION_RATE = 0.005
+NET_PROPAGATION_RATE = .001
 
 # The activation function used for backpropagation
 ACTIVATION_FUNC = "entropy"
 
 # Constant to use for regularization, 0 to not use it
-REGULARIZATION_CONSTANT = 0.01 * NET_PROPAGATION_RATE
+REGULARIZATION_CONSTANT = 80 * NET_PROPAGATION_RATE
 
 
 # Image manipulation settings
@@ -27,3 +27,7 @@ IMG_PRINT_STATUS = True
 
 # the number of digits in file outputs for frames
 IMG_NUM_DIGITS = 8
+
+
+# the target to use for CUDA
+VECTORIZE_TARGET = "cpu"

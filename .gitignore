@@ -8,4 +8,6 @@ NeuralNet/__pycache__/FeedForward.cpython-37.pyc
 venv/
 saves/
 images/
+NeuralNet/__pycache__
 .idea/vcs.xml
+*.pyc

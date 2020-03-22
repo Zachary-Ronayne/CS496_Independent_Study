@@ -6,8 +6,12 @@ from ImageManip.TrainingData import dataSubSet
 
 import time
 import random
+from os import mkdir
+from os.path import isdir
 
 import numpy as np
+
+import numba
 
 
 class Network:
@@ -231,6 +235,7 @@ class Network:
 
     # save this Network with the given file name relative to the saves folder
     def save(self, name):
+        createSaves()
         # open the file
         with open("saves/" + name + ".txt", "w") as f:
             # save the number of layers
@@ -491,7 +496,7 @@ class MatrixNetwork:
         # iterate through each layer of weights and biases
         for w, b in zip(self.weights, self.biases):
             # multiply the weight matrix by the current values of the layer, plus the bias, sent through sigmoid
-            outputs = sigmoid(np.dot(w, outputs) + b)
+            outputs = sigmoid(calc_zActivation(w, b, outputs))
 
         return outputs
 
@@ -520,12 +525,12 @@ class MatrixNetwork:
         # iterate through each pair of weights and biases for each layer
         for w, b in zip(self.weights, self.biases):
             # determine the zActivation array for the current layer
-            z = np.dot(w, inputs) + b
+            z = calc_zActivation(w, b, inputs)
             # add the zActivation array to the list
             zActivations.append(z)
             # determine the proper activation array for the current layer,
             #   which is also used in the next loop iteration
-            inputs = sigmoid(z)
+            inputs = sigmoid(z)  # TODO replace sigmoid calls with activation function calls
             # add the activation array to the list
             activations.append(inputs)
 
@@ -553,7 +558,7 @@ class MatrixNetwork:
             # this takes the dot product of the weights going into the current layer,
             #   which is why self.weights is indexed at [-lay + 1], rather than [-lay]
             # it is then multiplied by the values in dSigs for the other part of the derivative
-            baseDerivatives = np.dot(self.weights[-lay + 1].transpose(), baseDerivatives) * dSigs
+            baseDerivatives = calc_multDot(self.weights[-lay + 1].transpose(), baseDerivatives, dSigs)
 
             # set the base derivatives in the bias list
             bGradient[-lay] = baseDerivatives
@@ -657,6 +662,7 @@ class MatrixNetwork:
         This save file will not be compatible with the regular Network
         :param name: The name to save under. Don't include a file extension.
         """
+        createSaves()
         with open("saves/" + name + ".txt", "w") as f:
             # write the layer size data
             f.write(" ".join([str(s) for s in self.sizes]))
@@ -743,6 +749,14 @@ class MatrixNetwork:
         return newNet
 
 
+def createSaves():
+    """
+    Create the directory for the saves folder if one doesn't exist
+    """
+    if not isdir("saves"):
+        mkdir("saves")
+
+
 def sigmoid(x):
     """
     Get the value of the mathematical function sigmoid for x,
@@ -783,12 +797,12 @@ def costDerivative(actual, expected, zActivation, func="quadratic"):
     :return: The cost
     """
     if func == "quadratic":
-        return 2 * (actual - expected) * zActivation
+        return 2 * calc_subMult(actual, expected, zActivation)
     elif func == "entropy":
-        return actual - expected
+        return calc_sub(actual, expected)
     else:
         raise Exception("Invalid func type \"" + str(func) + "\"\n"
-                        "Valid types: quadratic, entropy, cubic")
+                        "Valid types: quadratic, entropy")
 
 
 def averageList(values, count):
@@ -839,3 +853,61 @@ def makeImageNetwork(inSize, outSize, hidden, matrixNet=True):
         return MatrixNetwork(hidden)
     else:
         return Network(hidden)
+
+
+# @numba.jit
+def calc_zActivation(w, b, a):
+    """
+    Calculate the zActivation values for the given weights biases, and activations.
+    It is assumed all inputs are of valid sizes of numpy arrays
+    :param w: The weights
+    :param b: The biases
+    :param a: The activations feeding into the next layer
+    :return: The result
+    """
+    return np.dot(w, a) + b
+
+
+def calc_multDot(a, b, c):
+    """
+    Find the dot product of a and b multiplied by c
+    :param a: The first part of the dot product
+    :param b: The second part of the dot product
+    :param c: The part to multiply
+    :return:
+    """
+    return np.dot(a, b) * c
+
+
+# TODO calc method for cost derivatives
+def calc_sub(a, b):
+    """
+    Calculate a minus b
+    :param a: The a value
+    :param b: The b value
+    :return: The result of a minus b
+    """
+    return a - b
+
+
+def calc_subMult(a, b, c):
+    """
+    Calculate a minus b all times c
+    :param a: The a value
+    :param b: The b value
+    :param c: The c value
+    :return: The final value of a minus b all times c
+    """
+    return (a - b) * c
+
+
+# TODO calc method for sigmoid
+
+
+# TODO calc method for dSigmoid
+
+
+# TODO calc method for dot?
+
+
+# TODO calc method for outer?
