@@ -16,7 +16,6 @@ Back propagation:
 
 For some reason, all images are always the same?
     Why?
-Add multiple activation functions, ray loo (is that how it's spelled?), and tanh (modified sigmoid in range [-1, 1])
 Implement regularization techniques:
     Using absolute value of weights for the addition to cost function, rather than the square of the weights
         Shrink weights by a constant amount, rather than based on their current weight
@@ -61,7 +60,6 @@ Sometimes when images are loaded in MakeImages.videoToPillowImages, they are in 
 
 
 
-
 Misc
 
 Add a way to create a random neural network from a seed
@@ -88,9 +86,9 @@ from NeuralNet.MNIST import *
 # all above are for training2 trainFolder
 
 
-inSize = (64, 36)
-outSize = (64, 36)
-trainCount = 1
+inSize = (16, 9)
+outSize = (16, 9)
+trainCount = 100
 dataSplit = 40
 trainFolder = "training2"
 afterPath = "images/after/"
@@ -99,7 +97,7 @@ splitVideoFile = False
 
 
 if splitVideoFile:
-    splitVideoToInOutImages("", trainFolder, (inSize, outSize), skip=5, bars=False)
+    splitVideoToInOutImages("", trainFolder, (inSize, outSize), skip=60, bars=False)
 vidData = dataFromFolders(trainFolder + " (train_data)/")
 
 if not Net.isdir("saves/after"):
@@ -126,15 +124,13 @@ vidNet.save("vidNet")
 processFromFolder(vidNet, trainFolder + " (train_data)/grayInput/", afterPath, inSize, outSize)
 
 
-
 """
-trainCount = 10
+trainCount = 100
 training = "Z:/MNIST dataset/digits/training"
 testing = "Z:/MNIST dataset/digits/testing"
 
 mnistNet = getMnistNetwork([50, 40, 30])
 mnistNet.load("MIST5")
-mnistNet.random()
 
 if not trainCount == 0:
     trainData = openData(training, 10000, rand=True)

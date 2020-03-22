@@ -14,6 +14,18 @@ import numpy as np
 import numba
 
 
+activationList = [
+    lambda x: sigmoid(x),
+    lambda x: tanh(x),
+    lambda x: relu(x)
+]
+activationDerivList = [
+    lambda x: derivSigmoid(x),
+    lambda x: derivTanh(x),
+    lambda x: derivRelu(x)
+]
+
+
 class Network:
 
     # initialize a feed forward network
@@ -96,7 +108,7 @@ class Network:
         baseDerivatives = []
         for j, n in enumerate(self.layers[-1].nodes):
             # find the derivative value for the first 2 terms
-            derivative = costDerivative(n.activation, expected[j], n.zActivation)
+            derivative = costDerivative(n.activation, expected[j], n.zActivation, func=Settings.COST_FUNC)
             # add the derivative to the baseDerivatives list
             baseDerivatives.append(derivative)
             # the bias values get the same derivative, so add it to that list also
@@ -117,14 +129,14 @@ class Network:
         # now, iterate through the rest of the layers, applying the derivatives as the go back through the layers
         # the indexes for the layers use the negative index of lay, to go backwards through the list
         for lay in range(2, len(self.layers)):
-            # first, find the derivative sigmoid values for each of the activations in the current layer
+            # first, find the derivative activation values for each of the activations in the current layer
             # this is for the next part of calculating this layer's derivatives
 
-            # set up a list to keep track of the sigmoid values
-            dSigmoids = []
-            # iterate through each of the nodes in the current layer, and take it's activation through the sigmoid
+            # set up a list to keep track of the activation values
+            dActivation = []
+            # iterate through each of the nodes in the current layer, and take it's activation through the activation
             for n in self.layers[-lay].nodes:
-                dSigmoids.append(dSigmoid(n.zActivation))
+                dActivation.append(derivActivation(Settings.ACTIVATION_FUNC, n.zActivation))
 
             # now, take those values and multiply them with corresponding weights, and the derivatives from the
             #   previous layer to determine the values for the biases
@@ -141,9 +153,9 @@ class Network:
                 for i in range(len(baseDerivatives)):
                     total += baseDerivatives[i] * self.layers[-lay + 1].nodes[i].connections[j].weight
 
-                # the final derivative is the current derivative sigmoid value times the total from the previous
+                # the final derivative is the current derivative activation value times the total from the previous
                 #   matrix calculation
-                derivative = dSigmoids[j] * total
+                derivative = dActivation[j] * total
                 # set the new base derivative
                 newDerivatives.append(derivative)
 
@@ -359,7 +371,7 @@ class Node:
         # value is always initialized to 0
         self.activation = 0
 
-        # the value of the activation before it's sent into the sigmoid function
+        # the value of the activation before it's sent into the activation function
         self.zActivation = 0
 
     # determine the value of this Node by giving it a layer of nodes. The value is stored in this Node, and returned
@@ -369,7 +381,7 @@ class Node:
         for i in range(layer.size()):
             self.zActivation += layer.nodes[i].activation * self.connections[i].weight
 
-        self.activation = sigmoid(self.zActivation)
+        self.activation = activation(Settings.ACTIVATION_FUNC, self.zActivation)
 
         return self.activation
 
@@ -495,8 +507,8 @@ class MatrixNetwork:
         outputs = np.asarray(inputs)
         # iterate through each layer of weights and biases
         for w, b in zip(self.weights, self.biases):
-            # multiply the weight matrix by the current values of the layer, plus the bias, sent through sigmoid
-            outputs = sigmoid(calc_zActivation(w, b, outputs))
+            # multiply the weight matrix by the current values of the layer, plus the bias, put in activation function
+            outputs = activation(Settings.ACTIVATION_FUNC, calc_zActivation(w, b, outputs))
 
         return outputs
 
@@ -530,15 +542,16 @@ class MatrixNetwork:
             zActivations.append(z)
             # determine the proper activation array for the current layer,
             #   which is also used in the next loop iteration
-            inputs = sigmoid(z)  # TODO replace sigmoid calls with activation function calls
+            inputs = activation(Settings.ACTIVATION_FUNC, z)
             # add the activation array to the list
             activations.append(inputs)
 
         # calculate the first part of the derivatives, which will also be the bias values
         # this is the cost derivative part, based on the expected outputs,
-        #   and the derivative of the sigmoid with the zActivation
-        baseDerivatives = costDerivative(activations[-1], expected, dSigmoid(zActivations[-1]),
-                                         Settings.ACTIVATION_FUNC)
+        #   and the derivative of the activation with the zActivation
+        baseDerivatives = costDerivative(activations[-1], expected,
+                                         derivActivation(Settings.ACTIVATION_FUNC, zActivations[-1]),
+                                         func=Settings.COST_FUNC)
         # set the last element in the bias gradient to the initial base derivative
         bGradient[-1] = baseDerivatives
 
@@ -550,15 +563,15 @@ class MatrixNetwork:
         # go through each remaining layers and calculate the remaining weight and bias derivatives
         for lay in range(2, len(self.biases) + 1):
             # find the derivatives of the zActivations for the current layer
-            # this is the next component in the chain rule, the sigmoid derivatives of the zActivations
-            dSigs = dSigmoid(zActivations[-lay])
+            # this is the next component in the chain rule, the activation derivatives of the zActivations
+            dActivations = derivActivation(Settings.ACTIVATION_FUNC, zActivations[-lay])
 
-            # multiply the sigmoid derivative values with the corresponding weights
+            # multiply the activation derivative values with the corresponding weights
             #   and derivatives from the previous layer
             # this takes the dot product of the weights going into the current layer,
             #   which is why self.weights is indexed at [-lay + 1], rather than [-lay]
             # it is then multiplied by the values in dSigs for the other part of the derivative
-            baseDerivatives = calc_multDot(self.weights[-lay + 1].transpose(), baseDerivatives, dSigs)
+            baseDerivatives = calc_multDot(self.weights[-lay + 1].transpose(), baseDerivatives, dActivations)
 
             # set the base derivatives in the bias list
             bGradient[-lay] = baseDerivatives
@@ -573,6 +586,7 @@ class MatrixNetwork:
         return wGradient, bGradient
 
     def applyGradient(self, gradient, dataSize):
+        print(gradient)
         """
         Apply the given gradient to the weights and biases
         :param gradient: The gradient to apply
@@ -757,6 +771,26 @@ def createSaves():
         mkdir("saves")
 
 
+def activation(func, x):
+    """
+    Get the activation value of the given function.
+    :param func: The function, use constants in Settings: SIGMOID, TANH, RELU
+    :param x: The value to process
+    :return: the result of the activation function
+    """
+    return activationList[func](x)
+
+
+def derivActivation(func, x):
+    """
+    Get the dserivative of the activation value of the given function.
+    :param func: The function, use constants in Settings: SIGMOID, TANH, RELU
+    :param x: The value to process
+    :return: the result of the derivative of the activation function
+    """
+    return activationDerivList[func](x)
+
+
 def sigmoid(x):
     """
     Get the value of the mathematical function sigmoid for x,
@@ -773,7 +807,7 @@ def sigmoid(x):
     return 1.0 / (1.0 + np.power(np.e, -x))
 
 
-def dSigmoid(x):
+def derivSigmoid(x):
     """
     Get the value of the derivative of the mathematical function sigmoid for x.
     :param x: The value to take the sigmoid derivative of
@@ -781,6 +815,49 @@ def dSigmoid(x):
     """
     sig = sigmoid(x)
     return sig - sig * sig
+
+
+def tanh(x):
+    """
+    Get the tanh value of x
+    :param x: The value to take the tanh of
+    :return: The tanh value
+    """
+    return np.tanh(x)
+
+
+def derivTanh(x):
+    """
+    Get the derivative of the tanh value of x
+    :param x: The value to take the derivative tanh of
+    :return: The tanh value derivative
+    """
+    tan = tanh(x)
+    return 1 - tan * tan
+
+
+def relu(x):
+    """
+    Get the relu value of x
+    :param x: The value to take the relu of
+    :return: The relu of x
+    """
+    return np.maximum(x, 0, x)
+
+
+def derivRelu(x):
+    """
+    Get the derivative of the relu of x
+    :param x: The value to take the derivative of relu of
+    :return: The relu derivative of x
+    """
+    # f = np.vectorize(lambda n: 1 if n > 0 else 0)
+    # return f(x)
+    # TODO find a better way of doing this beyond looping through all values
+    for i, n in enumerate(x):
+        x[i] = 1 if n > 0 else 0
+
+    return x
 
 
 def costDerivative(actual, expected, zActivation, func="quadratic"):

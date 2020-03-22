@@ -9,9 +9,9 @@ class TestFeedForward(TestCase):
         self.assertAlmostEqual(N.sigmoid(-5.0), 0.006692850924, 8, "Should correctly return sigmoid value")
 
     def test_dSigmoid(self):
-        self.assertAlmostEqual(N.dSigmoid(0.0), 0.25, 8, "Should correctly return sigmoid value")
-        self.assertAlmostEqual(N.dSigmoid(5.0), 0.0066480566707901, 8, "Should correctly return derivative of sigmoid")
-        self.assertAlmostEqual(N.dSigmoid(-5.0), 0.006648056670790, 8, "Should correctly return derivative of sigmoid")
+        self.assertAlmostEqual(N.derivSigmoid(0.0), 0.25, 8, "Should correctly return sigmoid value")
+        self.assertAlmostEqual(N.derivSigmoid(5.0), 0.0066480566707901, 8, "Should correctly return derivative of sigmoid")
+        self.assertAlmostEqual(N.derivSigmoid(-5.0), 0.006648056670790, 8, "Should correctly return derivative of sigmoid")
 
     def test_averageList(self):
         avg = [5]
