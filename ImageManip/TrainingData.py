@@ -1,6 +1,7 @@
 from ImageManip.MakeImages import *
 
 import shutil
+from os.path import isdir
 
 
 def folderToInOutImages(inSize, outSize, source, folder, bars=True):
@@ -18,13 +19,20 @@ def folderToInOutImages(inSize, outSize, source, folder, bars=True):
     :param source: The path to the folder containing all images. The folder must only contain images.
         The folder is relative to the images directory
         or
-        a list of Pillow images to convert
-    :param folder: The folder to save the images to, relative to images
+        A list of Pillow images to convert
+    :param folder: The folder to save the images to, relative to images.
+        Will automatically add on " (train_data)" to the folder to seperate it from other folders
     :param bars: True if images of differing aspect ratios should apply black bars to fill the space,
         False to stretch the image. Default True
     """
     # direct the folder to the images folder
+    folder += " (train_data)"
     folder = "images/" + folder + "/"
+
+    # create the output folder, deleting it first if it already exists
+    if isdir(folder):
+        shutil.rmtree(folder)
+    mkdir(folder)
 
     # create the paths for the folders
     colorPath = folder + "colorOutput/"
@@ -130,20 +138,24 @@ def splitVideoToInOutImages(path, name, sizes=(None, None), skip=1, start=0, end
     :return: The training data as a tuple
     """
 
-    # ensure that the saves folder exists
+    # ensure that the images folder exists
     createImages()
+
+    # determine the new path name for where each folder will be saved
+    trainingDataPath = path + name + " (train_data)/"
+
+    if isdir("images/" + trainingDataPath):
+        shutil.rmtree("images/" + trainingDataPath)
 
     # create a folder with each frame of the video, and store the path
     splitPath = splitVideo(path, name, sizes[1], skip, start, end, frameRange, bars=bars)
-    # determine the new path name for where each folder will be saved
-    trainingDataPath = path + name + " (train_data)/"
 
     # make a directory for the new folder
     if not isdir("images/" + trainingDataPath):
         mkdir("images/" + trainingDataPath)
 
     # get training data from the split frames and convert them to images
-    folderToInOutImages(sizes[0], sizes[1], splitPath, trainingDataPath, bars=bars)
+    folderToInOutImages(sizes[0], sizes[1], splitPath, path + name, bars=bars)
 
     # delete the folder from the initial video file split
     shutil.rmtree(splitPath)

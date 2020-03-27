@@ -2,20 +2,8 @@
 
 TODO
 
-
-Attempt to speed up, this video acts as an introduction: https://www.youtube.com/watch?v=dPQnFXD7DxM
-    This will involve making lots of helper methods that the library can use
-
-For Radeon https://numba.pydata.org/numba-doc/dev/roc/index.html
-
-Maybe try using OpenCL: https://documen.tician.de/pyopencl/
-
-
-
 Back propagation:
 
-For some reason, all images are always the same?
-    Why?
 Implement regularization techniques:
     Using absolute value of weights for the addition to cost function, rather than the square of the weights
         Shrink weights by a constant amount, rather than based on their current weight
@@ -26,7 +14,6 @@ Implement regularization techniques:
 Apply better initialization, device each weight by the number of nodes in it's layer
 Add option to not change training rate for different layers, maybe add an option to reverse it
 Add learning rate scheduling, so as more training times happen, the learning rate goes down
-Add test cases for new methods
 Parallelize training layers, like layers should be all arrays, not a list of arrays
 
 
@@ -36,10 +23,8 @@ Image manipulation:
 
 Try adding noise to input images, which also produce the same color output, artificially increase dataset
     Can also vertically and or horizontally flip images to increase dataset
-Make a way to apply a small, say 28x28, image filter that goes along each 28x28 section of an image
-    to train and process those parts of the image, maybe also have sections overlap and take averages
+Add a system to use overlapping parts in the image splitter
 Make GUI and commandline program for image manipulation
-Adding images to a folder should first delete the folder, then add images, to ensure extra images are not there
 
 
 
@@ -58,11 +43,24 @@ Sometimes when images are loaded in MakeImages.videoToPillowImages, they are in 
     need to figure out places where it needs to be converted
     Fixed? Need to verify
 
+Normalize the formats for saving and loading images in folders, it's currently very hacky
+
 
 
 Misc
 
 Add a way to create a random neural network from a seed
+
+
+
+Parallelization (need NVIDIA GPU):
+
+Attempt to speed up, this video acts as an introduction: https://www.youtube.com/watch?v=dPQnFXD7DxM
+    This will involve making lots of helper methods that the library can use
+
+For Radeon? https://numba.pydata.org/numba-doc/dev/roc/index.html
+
+Maybe try using OpenCL: https://documen.tician.de/pyopencl/
 
 
 
@@ -78,6 +76,8 @@ import time
 
 from NeuralNet.MNIST import *
 
+from ImageManip.ImageSpliter import *
+
 
 # for good results, at least temporarily
 # 5000 train count, 0.05 train rate, 7 layers of 200 hidden, 16x9 in and output size, 0.1 regularization
@@ -85,23 +85,26 @@ from NeuralNet.MNIST import *
 # 0.01 train rate, 100 train count, 70 regularization, no hidden layers, skip=30 64x36 in and out
 # all above are for training2 trainFolder
 
+imgSize = 28
+# splitImage("cat.png", "trainingCat", imgSize, imgSize, resize=(320, 180))
 
-inSize = (16, 9)
-outSize = (16, 9)
-trainCount = 100
+inSize = (imgSize, imgSize)
+outSize = (imgSize, imgSize)
+trainCount = 0
 dataSplit = 40
-trainFolder = "training2"
+trainFolder = "trainingCat"
 afterPath = "images/after/"
-loadNet = False
+loadNet = True
 splitVideoFile = False
+process = False
 
 
 if splitVideoFile:
-    splitVideoToInOutImages("", trainFolder, (inSize, outSize), skip=60, bars=False)
+    splitVideoToInOutImages("", trainFolder, (inSize, outSize), skip=4, bars=False)
 vidData = dataFromFolders(trainFolder + " (train_data)/")
 
-if not Net.isdir("saves/after"):
-    Net.mkdir("saves/after")
+if not Net.isdir("images/after"):
+    Net.mkdir("images/after")
 
 if loadNet:
     vidNet = Net.MatrixNetwork([])
@@ -111,17 +114,23 @@ else:
     vidNet.random()
 
 
-startTime = time.time()
-
-vidNet.train(vidData, shuffle=True, split=dataSplit, times=trainCount,
-             func=(lambda t, s: print("training time " + str(t) + " subset " + str(s))))
-
-endTime = time.time() - startTime
-print("Took: " + str(endTime) + " seconds")
+if trainCount > 0:
+    startTime = time.time()
+    vidNet.train(vidData, shuffle=True, split=dataSplit, times=trainCount, learnSchedule=-.5,
+                 func=(lambda t, s: print("training time " + str(t) + " subset " + str(s))))
+    endTime = time.time() - startTime
+    print("Took: " + str(endTime) + " seconds")
 
 
 vidNet.save("vidNet")
-processFromFolder(vidNet, trainFolder + " (train_data)/grayInput/", afterPath, inSize, outSize)
+if process:
+    processFromFolder(vidNet, trainFolder + " (train_data)/grayInput/", afterPath, inSize, outSize)
+
+cat = Image.open("images/cat.png")
+cat = convertGrayScale(cat)
+imgNet = ImgNet.convertFromMatrix(vidNet, inSize, outSize)
+finalImg = applyNetwork(cat, imgNet, resize=(320, 180))
+finalImg.save("images/catNew.png")
 
 
 """

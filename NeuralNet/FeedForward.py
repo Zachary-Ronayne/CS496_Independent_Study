@@ -11,8 +11,6 @@ from os.path import isdir
 
 import numpy as np
 
-import numba
-
 
 activationList = [
     lambda x: sigmoid(x),
@@ -27,6 +25,10 @@ activationDerivList = [
 
 
 class Network:
+    """
+    This is a proof of concept class used to demonstrate how NeuralNetworks work in an object oriented way.
+    This should not be used in any real computations, use MatrixNetwork instead.
+    """
 
     # initialize a feed forward network
     # layers: use None or no parameter for an empty network
@@ -586,7 +588,6 @@ class MatrixNetwork:
         return wGradient, bGradient
 
     def applyGradient(self, gradient, dataSize):
-        print(gradient)
         """
         Apply the given gradient to the weights and biases
         :param gradient: The gradient to apply
@@ -596,14 +597,19 @@ class MatrixNetwork:
         # decreasing the change as they get closer to the front layer.
         size = len(self.biases)
         for i in range(size):
-            factor = float(i + 1) / float(size)
+            if Settings.LEARNING_RATE_BY_LAYER > 0:
+                factor = float(size - i) / float(size)
+            elif Settings.LEARNING_RATE_BY_LAYER < 0:
+                factor = float(i + 1) / float(size)
+            else:
+                factor = 1
             # TODO consider putting the regularization code in backpropagation, not here
             self.weights[i] = self.weights[i] * (1 - Settings.REGULARIZATION_CONSTANT / dataSize)\
                               - gradient[0][i] * factor
 
             self.biases[i] = self.biases[i] - gradient[1][i] * factor
 
-    def train(self, data, shuffle=False, split=1, times=1, func=None):
+    def train(self, data, shuffle=False, split=1, times=1, func=None, learnSchedule=0):
         """
         Take the given data train the Network with it.
         :param data: The training data. Can be a single tuple containing the input and then the outputs
@@ -611,8 +617,12 @@ class MatrixNetwork:
         :param shuffle: True to shuffle data each time the training loops, False otherwise
         :param split: Split the training data into subsets of this size.
         :param times: Train on the data this number of times
-        :param func: A function that will be called each time a training interval is finished.
+        :param func: A function that will be called each time a training interval is finished. Mostly for output.
             Must accept two int params. First is the training times count, the second is the split count
+        :param learnSchedule: The degree to which learning rate will change as each training time happens.
+            Use 0 to disable, negative numbers to make learning rate decrease each training time, and
+            positive numbers to make learning rate increase each training time.
+            Rates are based exponentially. Default 0
         """
         # if the data is not already a list of lists, put it in a list
         if isinstance(data, tuple):
@@ -638,11 +648,14 @@ class MatrixNetwork:
                     # calculate the gradient
                     gradient = self.backpropagate(d[0], d[1])
 
+                    # determine scheduled learning rate
+                    rate = np.power(t + 1, learnSchedule)
+
                     # add the gradient from the current backpropagation call to the total gradient
                     # accounting for averages and learning rate
                     for i in range(len(gradient[0])):
-                        gradientTotal[0][i] += gradient[0][i] * Settings.NET_PROPAGATION_RATE / len(dat)
-                        gradientTotal[1][i] += gradient[1][i] * Settings.NET_PROPAGATION_RATE / len(dat)
+                        gradientTotal[0][i] += gradient[0][i] * rate * Settings.NET_PROPAGATION_RATE / len(dat)
+                        gradientTotal[1][i] += gradient[1][i] * rate * Settings.NET_PROPAGATION_RATE / len(dat)
 
                 # apply the final gradient
                 self.applyGradient(gradientTotal, len(dat))
@@ -932,7 +945,6 @@ def makeImageNetwork(inSize, outSize, hidden, matrixNet=True):
         return Network(hidden)
 
 
-# @numba.jit
 def calc_zActivation(w, b, a):
     """
     Calculate the zActivation values for the given weights biases, and activations.

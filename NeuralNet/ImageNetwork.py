@@ -58,3 +58,20 @@ class ImageNet(MatrixNetwork):
             lines = f.readlines()[-2:]
             self.inSize = tuple(lines[0])
             self.outSize = tuple(lines[1])
+
+
+def convertFromMatrix(matNet, inSize, outSize):
+    """
+    Create an ImageNetwork out of a MatrixNetwork
+    :param matNet: The network to convert
+    :param inSize: The inSize of the ImageNetwork
+    :param outSize: The outSize of the ImageNentwork
+    :return: the converted ImageNetwork
+    """
+    net = ImageNet(inSize, outSize, matNet.sizes)
+    net.inSize = inSize
+    net.outSize = outSize
+    net.weights = matNet.weights
+    net.biases = matNet.biases
+
+    return net
