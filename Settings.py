@@ -20,16 +20,16 @@ NET_MAX_BIAS = 2
 NET_PROPAGATION_RATE = 0.1
 
 # Constant to use for regularization, 0 to disable
-REGULARIZATION_CONSTANT = .0
+REGULARIZATION_CONSTANT = 0.01
 
-# Amount to decrease weights when trained with a backpropagation, set to 0 to disable
-WEIGHT_SHRINK = 0.00000
+# Amount to decrease weights when trained with backpropagation, set to 0 to disable
+WEIGHT_SHRINK = 0.00001
 
 # The amount of dropout that should be used. Use None to disable dropout.
 # Otherwise, use a number in the range [0, 1] for that percentage of the nodes to be dropped out,
 #   meaning, 0.1 gives a 10% chance for each node to be dropped out,
 #   .9 gives a 90% chance for each node to be dropped out
-DROP_OUT = 0.1
+DROP_OUT = 0.5
 
 # The cost function used for backpropagation
 COST_FUNC = "entropy"

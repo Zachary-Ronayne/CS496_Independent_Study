@@ -4,11 +4,6 @@ TODO
 
 Back propagation:
 
-Implement regularization techniques:
-    Try implementing dropout, basically re-randomizing a small number of nodes
-    Or, ignore randomly half the hidden nodes, then run the training through that, then do it again on
-        random nodes, essentially only thinking about how some nodes effect the output at a time.
-        Also remember to half the weights to account for twice as many weights being used
 Apply better initialization, device each weight by the number of nodes in it's layer
 Parallelize training layers, like layers should be all arrays, not a list of arrays
 Investigate convolutional layers
@@ -108,7 +103,7 @@ if not mnist:
         vidNet = Net.MatrixNetwork([])
         vidNet.load("vidNet")
     else:
-        vidNet = ImgNet.ImageNet(inSize, outSize, [])  # [150, 200, 250, 300])
+        vidNet = ImgNet.ImageNet(inSize, outSize, [3000])
         vidNet.random()
 
     if trainCount > 0:

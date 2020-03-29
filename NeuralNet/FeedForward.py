@@ -514,11 +514,13 @@ class MatrixNetwork:
 
         return outputs
 
-    def backpropagate(self, inputs, expected):
+    def backpropagate(self, inputs, expected, drop=None):
         """
         Calculate the gradient for changing the weights and biases.
         :param inputs: The inputs numerical values, must be a list of the same size as the input layer
         :param expected: The expected output numerical values, must be a list of the same size as the output layer
+        :param drop: The array used for determining what nodes should be dropped out. Use None to disable dropout.
+            Default: None
         :return: A tuple of the changed to be made to weights and biases.
             The first entry is a list of all the weight changes
             The second entry is a list of all the bias changes
@@ -537,7 +539,7 @@ class MatrixNetwork:
         # initialize a list to store all the zActivations
         zActivations = []
 
-        if Settings.DROP_OUT is None:
+        if drop is None:
             # iterate through each pair of weights and biases for each layer
             for w, b in zip(self.weights, self.biases):
                 # determine the zActivation array for the current layer
@@ -550,14 +552,8 @@ class MatrixNetwork:
                 # add the activation array to the list
                 activations.append(inputs)
         else:
-            # create array of nodes for dropout
-            dropout = []
-            for i, s in enumerate(self.sizes[1:]):
-                # add random values for each of the nodes that should be dropped out
-                dropout.append(np.random.rand(s))
-
             # iterate through each pair of weights and biases for each layer
-            for j, w, b, d in zip(range(len(dropout)), self.weights, self.biases, dropout):
+            for j, w, b, d in zip(range(len(drop)), self.weights, self.biases, drop):
                 # determine the zActivation array for the current layer
                 z = calc_zActivation(w, b, inputs)
                 # add the zActivation array to the list
@@ -567,9 +563,9 @@ class MatrixNetwork:
                 inputs = activation(Settings.ACTIVATION_FUNC, z)
                 # set the activation values to 0 for the dropped out nodes, only for hidden layers
                 # only perform drop out of this is not the output layer
-                if not j == len(dropout) - 1:
+                if not j == len(drop) - 1:
                     # set the input value to 0 when the dropout is within the threshold
-                    inputs = np.where(d < 0, 0, inputs)
+                    inputs = np.where(d < Settings.DROP_OUT, 0, inputs * 0.5)
                 # add the activation array to the list
                 activations.append(inputs)
 
@@ -599,6 +595,10 @@ class MatrixNetwork:
             #   which is why self.weights is indexed at [-lay + 1], rather than [-lay]
             # it is then multiplied by the values in dSigs for the other part of the derivative
             baseDerivatives = calc_multDot(self.weights[-lay + 1].transpose(), baseDerivatives, dActivations)
+
+            # set the baseDerivative values to 0 for dropped out nodes
+            if drop is not None and lay > 1:
+                baseDerivatives = np.where(drop[-lay] < Settings.DROP_OUT, 0, baseDerivatives * 0.5)
 
             # set the base derivatives in the bias list
             bGradient[-lay] = baseDerivatives
@@ -671,10 +671,21 @@ class MatrixNetwork:
                     [np.zeros(w.shape) for w in self.weights],
                     [np.zeros(b.shape) for b in self.biases]
                 )
+
+                # determine the dropout array
+                if Settings.DROP_OUT is None:
+                    drop = None
+                else:
+                    # create array of nodes for dropout
+                    drop = []
+                    for siz in self.sizes[1:]:
+                        # add random values for each of the nodes that should be dropped out
+                        drop.append(np.random.rand(siz))
+
                 # go through each piece of data in the subset
                 for d in dat:
                     # calculate the gradient
-                    gradient = self.backpropagate(d[0], d[1])
+                    gradient = self.backpropagate(d[0], d[1], drop=drop)
 
                     # determine scheduled learning rate
                     rate = np.power(t + 1, learnSchedule)
