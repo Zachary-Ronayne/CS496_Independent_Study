@@ -17,16 +17,19 @@ NET_MAX_BIAS = 2
 
 # the rate at which changes are made in the backpropagation algorithm, larger values mean larger steps
 #   meaning less precise training, but faster training
-NET_PROPAGATION_RATE = .05
+NET_PROPAGATION_RATE = .01
 
-# The activation function used for backpropagation
+# The cost function used for backpropagation
 COST_FUNC = "entropy"
 
-# Constant to use for regularization, 0 to not use it
-REGULARIZATION_CONSTANT = 1 * NET_PROPAGATION_RATE
+# Constant to use for regularization, 0 to disable
+REGULARIZATION_CONSTANT = 0.0003 * NET_PROPAGATION_RATE
+
+# Amount to decrease weights when trained with a backpropagation, set to 0 to disable
+WEIGHT_SHRINK = 0.000001
 
 # The activation function to use
-ACTIVATION_FUNC = SIGMOID
+ACTIVATION_FUNC = TANH
 
 # The way the learning rate changes as backpropagation gets towards the input layer.
 # Use 0 to not change, a negative number to decrease learning rate as the input layer approaches,

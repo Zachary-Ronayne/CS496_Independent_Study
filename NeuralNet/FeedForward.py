@@ -604,8 +604,12 @@ class MatrixNetwork:
             else:
                 factor = 1
             # TODO consider putting the regularization code in backpropagation, not here
-            self.weights[i] = self.weights[i] * (1 - Settings.REGULARIZATION_CONSTANT / dataSize)\
+            # calculate the base value for the new weight
+            w = self.weights[i] * (1 - Settings.REGULARIZATION_CONSTANT / dataSize)\
                               - gradient[0][i] * factor
+            # apply the weight shrinking for the new weight
+            w = np.where(w > 0, w - Settings.WEIGHT_SHRINK, w + Settings.WEIGHT_SHRINK)
+            self.weights[i] = w
 
             self.biases[i] = self.biases[i] - gradient[1][i] * factor
 
@@ -864,13 +868,7 @@ def derivRelu(x):
     :param x: The value to take the derivative of relu of
     :return: The relu derivative of x
     """
-    # f = np.vectorize(lambda n: 1 if n > 0 else 0)
-    # return f(x)
-    # TODO find a better way of doing this beyond looping through all values
-    for i, n in enumerate(x):
-        x[i] = 1 if n > 0 else 0
-
-    return x
+    return np.where(x > 0, 1, 0)
 
 
 def costDerivative(actual, expected, zActivation, func="quadratic"):
