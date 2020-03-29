@@ -536,17 +536,42 @@ class MatrixNetwork:
         activations = [inputs]
         # initialize a list to store all the zActivations
         zActivations = []
-        # iterate through each pair of weights and biases for each layer
-        for w, b in zip(self.weights, self.biases):
-            # determine the zActivation array for the current layer
-            z = calc_zActivation(w, b, inputs)
-            # add the zActivation array to the list
-            zActivations.append(z)
-            # determine the proper activation array for the current layer,
-            #   which is also used in the next loop iteration
-            inputs = activation(Settings.ACTIVATION_FUNC, z)
-            # add the activation array to the list
-            activations.append(inputs)
+
+        if Settings.DROP_OUT is None:
+            # iterate through each pair of weights and biases for each layer
+            for w, b in zip(self.weights, self.biases):
+                # determine the zActivation array for the current layer
+                z = calc_zActivation(w, b, inputs)
+                # add the zActivation array to the list
+                zActivations.append(z)
+                # determine the proper activation array for the current layer,
+                #   which is also used in the next loop iteration
+                inputs = activation(Settings.ACTIVATION_FUNC, z)
+                # add the activation array to the list
+                activations.append(inputs)
+        else:
+            # create array of nodes for dropout
+            dropout = []
+            for i, s in enumerate(self.sizes[1:]):
+                # add random values for each of the nodes that should be dropped out
+                dropout.append(np.random.rand(s))
+
+            # iterate through each pair of weights and biases for each layer
+            for j, w, b, d in zip(range(len(dropout)), self.weights, self.biases, dropout):
+                # determine the zActivation array for the current layer
+                z = calc_zActivation(w, b, inputs)
+                # add the zActivation array to the list
+                zActivations.append(z)
+                # determine the proper activation array for the current layer,
+                #   which is also used in the next loop iteration
+                inputs = activation(Settings.ACTIVATION_FUNC, z)
+                # set the activation values to 0 for the dropped out nodes, only for hidden layers
+                # only perform drop out of this is not the output layer
+                if not j == len(dropout) - 1:
+                    # set the input value to 0 when the dropout is within the threshold
+                    inputs = np.where(d < 0, 0, inputs)
+                # add the activation array to the list
+                activations.append(inputs)
 
         # calculate the first part of the derivatives, which will also be the bias values
         # this is the cost derivative part, based on the expected outputs,
@@ -603,7 +628,6 @@ class MatrixNetwork:
                 factor = float(i + 1) / float(size)
             else:
                 factor = 1
-            # TODO consider putting the regularization code in backpropagation, not here
             # calculate the base value for the new weight
             w = self.weights[i] * (1 - Settings.REGULARIZATION_CONSTANT / dataSize)\
                               - gradient[0][i] * factor

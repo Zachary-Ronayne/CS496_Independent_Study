@@ -17,19 +17,25 @@ NET_MAX_BIAS = 2
 
 # the rate at which changes are made in the backpropagation algorithm, larger values mean larger steps
 #   meaning less precise training, but faster training
-NET_PROPAGATION_RATE = .01
+NET_PROPAGATION_RATE = 0.1
+
+# Constant to use for regularization, 0 to disable
+REGULARIZATION_CONSTANT = .0
+
+# Amount to decrease weights when trained with a backpropagation, set to 0 to disable
+WEIGHT_SHRINK = 0.00000
+
+# The amount of dropout that should be used. Use None to disable dropout.
+# Otherwise, use a number in the range [0, 1] for that percentage of the nodes to be dropped out,
+#   meaning, 0.1 gives a 10% chance for each node to be dropped out,
+#   .9 gives a 90% chance for each node to be dropped out
+DROP_OUT = 0.1
 
 # The cost function used for backpropagation
 COST_FUNC = "entropy"
 
-# Constant to use for regularization, 0 to disable
-REGULARIZATION_CONSTANT = 0.0003 * NET_PROPAGATION_RATE
-
-# Amount to decrease weights when trained with a backpropagation, set to 0 to disable
-WEIGHT_SHRINK = 0.000001
-
 # The activation function to use
-ACTIVATION_FUNC = TANH
+ACTIVATION_FUNC = SIGMOID
 
 # The way the learning rate changes as backpropagation gets towards the input layer.
 # Use 0 to not change, a negative number to decrease learning rate as the input layer approaches,

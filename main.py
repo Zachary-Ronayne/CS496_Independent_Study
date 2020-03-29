@@ -87,8 +87,8 @@ if not mnist:
     imgSize = 28
     # splitImage("cat.png", "trainingCat", imgSize, imgSize, resize=(320, 180))
 
-    inSize = (64, 36)
-    outSize = (64, 36)
+    inSize = (16, 9)
+    outSize = (16, 9)
     trainCount = 10
     dataSplit = 40
     trainFolder = "training2"
@@ -108,7 +108,7 @@ if not mnist:
         vidNet = Net.MatrixNetwork([])
         vidNet.load("vidNet")
     else:
-        vidNet = ImgNet.ImageNet(inSize, outSize, [])
+        vidNet = ImgNet.ImageNet(inSize, outSize, [])  # [150, 200, 250, 300])
         vidNet.random()
 
     if trainCount > 0:
