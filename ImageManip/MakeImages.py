@@ -52,7 +52,7 @@ def splitVideo(videoPath, videoName, size=None, skip=1, start=0, end=1, frameRan
     The images are stored in a folder in the same location as the videoPath,
         the folder is called (videoName + "_split").
     :param videoPath: The folder with the video file, will be relative to images
-    :param videoName: The name of the video file, excluding file extension, must be .mov
+    :param videoName: The name of the video file, including file extension
     :param size: A tuple with the width and height to resize the images to, don't include to not modify the size
     :param skip: Skip every this many frames, default 1, meaning skip no frames
     :param start: The percentage in range [0, 1] of the starting point in the video to produce images, must be < end
@@ -64,8 +64,12 @@ def splitVideo(videoPath, videoName, size=None, skip=1, start=0, end=1, frameRan
         False to stretch the image. Default True
     :return: A string representing a path to the split folder
     """
+
+    # remove file extension
+    name = videoName[:videoName.index(".")]
+
     # determine the folder pat
-    splitPath = "images/" + videoPath + videoName + "_split"
+    splitPath = "images/" + videoPath + name + "_split"
 
     # if the directory doesn't exist, make one
     if not isdir(splitPath):
@@ -96,7 +100,7 @@ def videoToPillowImages(videoPath, videoName, size=None, skip=1, start=0, end=1,
     """
     Get a list of Pillow images from a video file
     :param videoPath: The folder with the video file, will be relative to images
-    :param videoName: The name of the video file, excluding file extension, must be .mov
+    :param videoName: The name of the video file, including file extension
     :param size: A tuple with the width and height to resize the images to, don't include to not modify the size
     :param skip: Skip every this many frames, default 1, meaning skip no frames
     :param start: The percentage in range [0, 1] of the starting point in the video to produce images, must be < end
@@ -110,7 +114,7 @@ def videoToPillowImages(videoPath, videoName, size=None, skip=1, start=0, end=1,
     """
     # determine the folder path
     videoPath = "images/" + videoPath
-    filePath = videoPath + videoName + ".mov"
+    filePath = videoPath + videoName
 
     # load in the video file
     video = cv2.VideoCapture(filePath)

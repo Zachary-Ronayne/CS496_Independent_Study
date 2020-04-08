@@ -84,14 +84,17 @@ def folderToInOutImages(inSize, outSize, source, folder, bars=True):
         cnt += 1
 
 
-# get a list of training data from a folder with the format created by trainingDataFromFolder
-# the folder should contain a folder called grayInput for the input images,
-#   and a folder called colorOutput for the expected output
-# both the folders should contain the exact same number of images, all of which are formatted
-#   correctly for training data
-# the images in the folders should only contain the training data and no other folders or files
-# path: the path to the two folders, relative to images
 def dataFromFolders(path):
+    """
+    Get a list of training data from a folder with the format created by trainingDataFromFolder
+    the folder should contain a folder called grayInput for the input images,
+       and a folder called colorOutput for the expected output.
+    Both the folders should contain the exact same number of images, all of which are formatted
+       correctly for training data.
+    The images in the folders should only contain the training data and no other folders or files
+    :param path: The path to the two folders, relative to images
+    :return: the data
+    """
     # ensure that the saves folder exists
     createImages()
 
@@ -124,7 +127,7 @@ def splitVideoToInOutImages(path, name, sizes=(None, None), skip=1, start=0, end
     Take the video file at the given path and create a folder of images for input data,
         and a folder of images for output data.
     :param path: The folder path containing the video file, relative to images
-    :param name: The file name of the video, excluding file extension, must be .mov
+    :param name: The file name of the video, including file extension
     :param sizes: A tuple of two tuples, each in the form of (width, height) for the number of pixels in images.
             The 0 index is the input image size, the 1 index is the output image size
     :param skip: Skip every this many frames, default 1, meaning skip no frames
@@ -138,11 +141,14 @@ def splitVideoToInOutImages(path, name, sizes=(None, None), skip=1, start=0, end
     :return: The training data as a tuple
     """
 
+    # remove file extention
+    fileName = name[:name.index(".")]
+
     # ensure that the images folder exists
     createImages()
 
     # determine the new path name for where each folder will be saved
-    trainingDataPath = path + name + " (train_data)/"
+    trainingDataPath = path + fileName + " (train_data)/"
 
     if isdir("images/" + trainingDataPath):
         shutil.rmtree("images/" + trainingDataPath)
@@ -155,7 +161,7 @@ def splitVideoToInOutImages(path, name, sizes=(None, None), skip=1, start=0, end
         mkdir("images/" + trainingDataPath)
 
     # get training data from the split frames and convert them to images
-    folderToInOutImages(sizes[0], sizes[1], splitPath, path + name, bars=bars)
+    folderToInOutImages(sizes[0], sizes[1], splitPath, path + fileName, bars=bars)
 
     # delete the folder from the initial video file split
     shutil.rmtree(splitPath)

@@ -5,16 +5,18 @@ TODO
 Back propagation:
 
 Apply better initialization, device each weight by the number of nodes in it's layer
-Parallelize training layers, like layers should be all arrays, not a list of arrays
 Investigate convolutional layers
 
 
 
 Image manipulation:
-
+Change image splitting to stretch images, not fill them with black space, give option to remove them also
+Allow a folder of images to be split into images for the split images thing, like the small filter
+Make video files load in frames more efficiently, only load in necessary frames, not every frame and then skipping some
 Try adding noise to input images, which also produce the same color output, artificially increase dataset
     Can also vertically and or horizontally flip images to increase dataset
 Add a system to use overlapping parts in the image splitter
+
 
 
 
@@ -79,22 +81,30 @@ from ImageManip.ImageSpliter import *
 mnist = False
 
 if not mnist:
-    imgSize = 28
-    # splitImage("cat.png", "trainingCat", imgSize, imgSize, resize=(320, 180))
 
-    inSize = (16, 9)
-    outSize = (16, 9)
-    trainCount = 10
-    dataSplit = 40
-    trainFolder = "training2"
+    imgSize = 20
+    vidData = []
+    # for i in range(7):
+    #    splitImage("cats/cat" + str(i) + ".png", "trainingCat" + str(i), imgSize, imgSize, resize=(320, 180))
+    for i in range(7):
+        vidData.extend(dataFromFolders("trainingCat" + str(i) + " (train_data)/"))
+
+    # inSize = (64, 36)
+    # outSize = (64, 36)
+    inSize = (imgSize, imgSize)
+    outSize = (imgSize, imgSize)
+    trainCount = 100
+    dataSplit = 10
+    trainFolder = "trainingCat"
+    trainName = trainFolder + ".mov"
     afterPath = "images/after/"
     loadNet = False
     splitVideoFile = False
     process = True
 
     if splitVideoFile:
-        splitVideoToInOutImages("", trainFolder, (inSize, outSize), skip=4, bars=False)
-    vidData = dataFromFolders(trainFolder + " (train_data)/")
+        splitVideoToInOutImages("", trainName, (inSize, outSize), skip=15, bars=False)
+    # vidData = dataFromFolders(trainFolder + " (train_data)/")
 
     if not Net.isdir("images/after"):
         Net.mkdir("images/after")
@@ -103,7 +113,7 @@ if not mnist:
         vidNet = Net.MatrixNetwork([])
         vidNet.load("vidNet")
     else:
-        vidNet = ImgNet.ImageNet(inSize, outSize, [3000])
+        vidNet = ImgNet.ImageNet(inSize, outSize, [5000])
         vidNet.random()
 
     if trainCount > 0:
@@ -120,7 +130,7 @@ if not mnist:
     cat = Image.open("images/cat.png")
     cat = convertGrayScale(cat)
     imgNet = ImgNet.convertFromMatrix(vidNet, inSize, outSize)
-    finalImg = applyNetwork(cat, imgNet, resize=(320, 180))
+    finalImg = applyNetwork(cat, imgNet, resize=None)
     finalImg.save("images/catNew.png")
 
 else:

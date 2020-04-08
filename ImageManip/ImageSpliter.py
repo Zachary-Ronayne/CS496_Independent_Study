@@ -74,7 +74,8 @@ def applyNetwork(img, net, resize=None):
     """
 
     # resize the image
-    img = img.resize(resize)
+    if resize is not None:
+        img = img.resize(resize)
 
     # get image sizes
     w, h = net.outSize

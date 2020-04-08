@@ -23,7 +23,7 @@ NET_PROPAGATION_RATE = 0.1
 REGULARIZATION_CONSTANT = 0.01
 
 # Amount to decrease weights when trained with backpropagation, set to 0 to disable
-WEIGHT_SHRINK = 0.00001
+WEIGHT_SHRINK = 0.000001
 
 # The amount of dropout that should be used. Use None to disable dropout.
 # Otherwise, use a number in the range [0, 1] for that percentage of the nodes to be dropped out,
