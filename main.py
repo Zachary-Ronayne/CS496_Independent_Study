@@ -6,6 +6,12 @@ Back propagation:
 
 Apply better initialization, device each weight by the number of nodes in it's layer
 Investigate convolutional layers
+    Add another matrix in each layer, and that is like a filter, it goes over each section of the image
+    Basically take the dot product at each spot, and place that in a new array for the image
+    The output sizes wont necessarily be the same?
+    The filters have esentially random numbers, basically the same kind of thing as a weight
+    High numbers mean the filter finds something important, low numbers mean it's something not important
+    The filter replaces each node
 
 
 
@@ -67,16 +73,34 @@ import random
 import time
 
 from NeuralNet.MNIST import *
+from NeuralNet.Convolutional import *
 
 from ImageManip.ImageSpliter import *
 
+trainCount = 1
+training = "Z:/MNIST dataset/digits/training"
+testing = "Z:/MNIST dataset/digits/testing"
+
+conNet = Convolution([(1, 5)], 10)
+conNet.random()
+
+if not trainCount == 0:
+    trainData = squareData(openData(training, 50, rand=True))
+    testData = squareData(openData(testing, 50, rand=True))
+    for i in range(trainCount):
+        conNet.train(trainData, shuffle=True, split=10, times=1)
+        print("(" + str(i) + ") Train correct: " + str(processData(conNet, trainData)) + "%")
+        print("(" + str(i) + ") Test correct:  " + str(processData(conNet, testData)) + "%")
+        print()
+
+
+"""
 
 # for good results, at least temporarily
 # 5000 train count, 0.05 train rate, 7 layers of 200 hidden, 16x9 in and output size, 0.1 regularization
 # 0.06 train rate, 100 train count, 0.01 regularization
 # 0.01 train rate, 100 train count, 70 regularization, no hidden layers, skip=30 64x36 in and out
 # all above are for training2 trainFolder
-
 
 mnist = False
 
@@ -154,3 +178,5 @@ else:
 
     imgFile = "Z:/MNIST dataset/num.png"
     print(processHandWritten(mnistNet, imgFile))
+
+"""

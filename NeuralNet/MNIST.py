@@ -63,6 +63,22 @@ def openData(path, limit=None, rand=False):
     return data
 
 
+def squareData(data):
+    """
+    Get the given list of MNIST data from in a 1D list, and return a list of 2D numpy arrays
+    :param data: The data to convert
+    :return: The new data
+    """
+    newData = []
+    for dat in data:
+        arr = np.zeros((MNIST_SIZE, MNIST_SIZE))
+        for i, d in enumerate(dat[0]):
+            arr[i % MNIST_SIZE, i // MNIST_SIZE] = d
+        newData.append((arr, dat[1]))
+
+    return newData
+
+
 def getMnistNetwork(inner):
     """
     Get a network object for processing MNIST data

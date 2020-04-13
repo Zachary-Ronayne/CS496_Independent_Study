@@ -5,6 +5,7 @@ import _TestCases.FeedForward.test_connection as TestCon
 import os
 
 
+@DeprecationWarning
 class TestNode(TestCase):
     def test_init(self):
         n = Net.Node()

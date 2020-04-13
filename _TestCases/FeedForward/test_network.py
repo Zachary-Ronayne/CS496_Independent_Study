@@ -5,6 +5,7 @@ import _TestCases.FeedForward.test_layer as TestLayer
 import os
 
 
+@DeprecationWarning
 class TestNetwork(TestCase):
     def test_init(self):
         net = Net.Network()

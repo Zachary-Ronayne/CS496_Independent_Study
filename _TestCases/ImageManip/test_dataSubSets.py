@@ -2,6 +2,7 @@ from unittest import TestCase
 from ImageManip.TrainingData import *
 
 
+@DeprecationWarning
 class TestDataSubSets(TestCase):
 
     def test_dataSubSet(self):

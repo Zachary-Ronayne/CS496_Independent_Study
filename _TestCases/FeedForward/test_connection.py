@@ -4,6 +4,7 @@ import NeuralNet.FeedForward as Net
 import os
 
 
+@DeprecationWarning
 class TestConnection(TestCase):
 
     def test_init(self):

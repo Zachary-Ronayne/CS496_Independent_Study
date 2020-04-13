@@ -2,6 +2,7 @@ from unittest import TestCase
 from NeuralNet import FeedForward as N
 
 
+@DeprecationWarning
 class TestFeedForward(TestCase):
     def test_sigmoid(self):
         self.assertAlmostEqual(N.sigmoid(0.0), 0.5, 8, "Should correctly return sigmoid value")
