@@ -77,16 +77,17 @@ from NeuralNet.Convolutional import *
 
 from ImageManip.ImageSpliter import *
 
+
 trainCount = 1
 training = "Z:/MNIST dataset/digits/training"
 testing = "Z:/MNIST dataset/digits/testing"
 
-conNet = Convolution([(1, 5)], 10)
+conNet = Convolution([(4, 2), (4, 2), (4, 2)], 10)
 conNet.random()
 
 if not trainCount == 0:
-    trainData = squareData(openData(training, 50, rand=True))
-    testData = squareData(openData(testing, 50, rand=True))
+    trainData = squareData(openData(training, 5, rand=True))
+    testData = squareData(openData(testing, 5, rand=True))
     for i in range(trainCount):
         conNet.train(trainData, shuffle=True, split=10, times=1)
         print("(" + str(i) + ") Train correct: " + str(processData(conNet, trainData)) + "%")

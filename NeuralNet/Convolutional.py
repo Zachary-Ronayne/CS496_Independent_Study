@@ -67,8 +67,7 @@ class Convolution:
         self.biases = [np.random.rand(xx[0]) for xx in sizes[1:]]
 
         # the MatrixNetwork for converting the final layer to the individual outputs
-        # TODO how do I know how many input nodes it has, just the number of matrix nodes in the final output?
-        self.decider = MatrixNetwork([sizes[-1][0], self.outputs])
+        self.decider = MatrixNetwork([sizes[-1][0], 50, self.outputs])
 
     def calculateInputs(self, inputs):
         """
@@ -94,17 +93,43 @@ class Convolution:
                 n = np.full(nextCurrent[0].shape, b)
                 for c, w in zip(nextCurrent, weight):
                     n += c * w
-                current.append(sigmoid(n))
+                current.append(activation(Settings.ACTIVATION_FUNC, n))
 
         # take outputs of final layer and feed them into a normal MatrixNetwork to get the final outputs
-        decideInput = [np.sum(c) for c in current]
+        decideInput = [np.max(c) for c in current]
         return self.decider.calculateInputs(decideInput)
 
-    def applyGradient(self, gradient):
-        # TODO
+    def applyGradient(self, gradient, dataSize):
         """
+        Apply the given gradient to the weights and biases of the main and convolutional layer
         :param gradient: The gradient to apply
+        :param dataSize: The size of data in the gradient
         """
+        size = len(self.biases)
+        for i in range(size):
+            if Settings.LEARNING_RATE_BY_LAYER > 0:
+                factor = float(size - i) / float(size)
+            elif Settings.LEARNING_RATE_BY_LAYER < 0:
+                factor = float(i + 1) / float(size)
+            else:
+                factor = 1
+            # calculate the base value for the new weight
+            w = self.weights[i] * (1 - Settings.REGULARIZATION_CONSTANT / dataSize)\
+                              - gradient[0][i] * factor
+            # apply the weight shrinking for the new weight
+            w = np.where(w > 0, w - Settings.WEIGHT_SHRINK, w + Settings.WEIGHT_SHRINK)
+            self.weights[i] = w
+
+            self.biases[i] = self.biases[i] - gradient[1][i] * factor
+
+            # calculate the base value for the new weight
+            w = self.decider.weights[i] * (1 - Settings.REGULARIZATION_CONSTANT / dataSize)\
+                              - gradient[2][i] * factor
+            # apply the weight shrinking for the new weight
+            w = np.where(w > 0, w - Settings.WEIGHT_SHRINK, w + Settings.WEIGHT_SHRINK)
+            self.decider.weights[i] = w
+
+            self.decider.biases[i] = self.decider.biases[i] - gradient[3][i] * factor
 
     def backpropagate(self, inputs, expected, drop=None):
         """
@@ -117,10 +142,195 @@ class Convolution:
             The first entry is a list of all the weight changes
             The second entry is a list of all the bias changes
         """
-        # TODO
         '''
+        
+        potentially useful links:
+        https://becominghuman.ai/back-propagation-in-convolutional-neural-networks-intuition-and-code-714ef1c38199
+        https://towardsdatascience.com/backpropagation-in-a-convolutional-layer-24c8d64d8509
+        
+        Return a thing for the weights and biases between layers
+        Also need a matrix for each of the filters
+        
+        What are the partial derivatives when using the filters?
+        
+        Find activations for the entire convolutional layer filters?
+        
         '''
-        return []
+
+        #
+        # find activations and zActivations for the convolutional network
+        #
+
+        # find the images for the first layer based on the one input image
+        current = [self.runFilter(inputs, fil) for fil in self.layers[0]]
+
+        # initialize the list of activations with the activations from the first layer
+        cActivations = [current]
+        # initialize a list to store all the zActivations
+        czActivations = []
+
+        # calculate through each layer
+        for lay, bias, weights, in zip(self.layers[1:], self.biases, self.weights):
+            currentLay = current
+            current = []
+            # go through each filter for each image, and apply all the filters
+            for fil, b, weight in zip(lay, bias, weights):
+                nextCurrent = []
+                # go through each image
+                for img in currentLay:
+                    nextCurrent.append(self.runFilter(img, fil))
+                # calculate the image for the current filter
+                n = np.full(nextCurrent[0].shape, b)
+                for c, w in zip(nextCurrent, weight):
+                    n += c * w
+                current.append(n)
+            czActivations.append(current)
+            cActivations.append([activation(Settings.ACTIVATION_FUNC, c) for c in current])
+
+        # convert the activations into single values
+        czActivations = [np.array([np.sum(a) for a in c]) for c in czActivations]
+        cActivations = [np.array([np.sum(a) for a in c]) for c in cActivations]
+
+        #
+        # find activations and zActivations for the decider network
+        #
+
+        # set up lists for the weight and bias gradients
+        # both of these create a numpy array of the same size as the weights and biases for that layer
+        wGradient = [np.zeros(w.shape) for w in self.decider.weights]
+        bGradient = [np.zeros(b.shape) for b in self.decider.biases]
+
+        # determine the activations and zActivations of each layer
+        # take the input list and ensure it's a numpy array
+        dInputs = np.asarray([np.sum(c) for c in cActivations[-1]])
+        # initialize the list of activations with the activations from the first layer
+        activations = [dInputs]
+        # initialize a list to store all the zActivations
+        zActivations = []
+
+        if drop is None:
+            # iterate through each pair of weights and biases for each layer
+            for w, b in zip(self.decider.weights, self.decider.biases):
+                # determine the zActivation array for the current layer
+                z = calc_zActivation(w, b, dInputs)
+                # add the zActivation array to the list
+                zActivations.append(z)
+                # determine the proper activation array for the current layer,
+                #   which is also used in the next loop iteration
+                dInputs = activation(Settings.ACTIVATION_FUNC, z)
+                # add the activation array to the list
+                activations.append(dInputs)
+        else:
+            # iterate through each pair of weights and biases for each layer
+            for j, w, b, d in zip(range(len(drop)), self.decider.weights, self.decider.biases, drop):
+                # determine the zActivation array for the current layer
+                z = calc_zActivation(w, b, dInputs)
+                # add the zActivation array to the list
+                zActivations.append(z)
+                # determine the proper activation array for the current layer,
+                #   which is also used in the next loop iteration
+                dInputs = activation(Settings.ACTIVATION_FUNC, z)
+                # set the activation values to 0 for the dropped out nodes, only for hidden layers
+                # only perform drop out of this is not the output layer
+                if not j == len(drop) - 1:
+                    # set the input value to 0 when the dropout is within the threshold
+                    dInputs = np.where(d < Settings.DROP_OUT, 0, dInputs * 0.5)
+                # add the activation array to the list
+                activations.append(dInputs)
+
+        #
+        # Calculate the derivatives for the backward pass for the decider network
+        #
+
+        # calculate the first part of the derivatives, which will also be the bias values
+        # this is the cost derivative part, based on the expected outputs,
+        #   and the derivative of the activation with the zActivation
+        baseDerivatives = costDerivative(activations[-1], expected,
+                                         derivActivation(Settings.ACTIVATION_FUNC, zActivations[-1]),
+                                         func=Settings.COST_FUNC)
+        # set the last element in the bias gradient to the initial base derivative
+        bGradient[-1] = baseDerivatives
+
+        # calculate the weight derivatives based on the activations of the previous layer, and the base derivatives
+        # using np.outer creates a 2D array from 2 1D arrays by multiplying each element in the first array
+        #   with each element in the second array
+        wGradient[-1] = np.outer(baseDerivatives, activations[-2].transpose())
+
+        # go through each remaining layers and calculate the remaining weight and bias derivatives
+        for lay in range(2, len(self.decider.biases) + 1):
+            # find the derivatives of the zActivations for the current layer
+            # this is the next component in the chain rule, the activation derivatives of the zActivations
+            dActivations = derivActivation(Settings.ACTIVATION_FUNC, zActivations[-lay])
+
+            # multiply the activation derivative values with the corresponding weights
+            #   and derivatives from the previous layer
+            # this takes the dot product of the weights going into the current layer,
+            #   which is why self.weights is indexed at [-lay + 1], rather than [-lay]
+            # it is then multiplied by the values in dSigs for the other part of the derivative
+            baseDerivatives = calc_multDot(self.decider.weights[-lay + 1].transpose(), baseDerivatives, dActivations)
+
+            # set the baseDerivative values to 0 for dropped out nodes
+            if drop is not None and lay > 1:
+                baseDerivatives = np.where(drop[-lay] < Settings.DROP_OUT, 0, baseDerivatives * 0.5)
+
+            # set the base derivatives in the bias list
+            bGradient[-lay] = baseDerivatives
+
+            # calculate and set the derivatives for the weight matrix
+            # using the same calculation as outside the loop with np.outer,
+            #   determine next part of the derivatives for the weight matrix
+            #   based on the baseDerivatives, and the activations of the previous layer
+            wGradient[-lay] = np.outer(baseDerivatives, activations[-lay - 1].transpose())
+
+        #
+        # Calculate the derivatives for the convolutional network
+        # TODO need to calculate derivatives for the filters also, somehow
+        #
+
+        # set up lists for the weight and bias gradients
+        # both of these create a numpy array of the same size as the weights and biases for that layer
+        cwGradient = [np.zeros(w.shape) for w in self.weights]
+        cbGradient = [np.zeros(b.shape) for b in self.biases]
+
+        # get the dActivations for the part of the derivatives for the input nodes of the decider network
+        dActivations = derivActivation(Settings.ACTIVATION_FUNC, czActivations[-1])
+
+        # get the base derivatives for the derivatives for the input nodes of the decider network
+        baseDerivatives = calc_multDot(self.decider.weights[0].transpose(), baseDerivatives, dActivations)
+
+        # the biases for the convolutional network will be the same as the base derivatives
+        cbGradient[-1] = baseDerivatives
+
+        # calculate the weight derivatives based on the activations of the previous layer, and the base derivatives
+        # using np.outer creates a 2D array from 2 1D arrays by multiplying each element in the first array
+        #   with each element in the second array
+        cwGradient[-1] = np.outer(baseDerivatives, cActivations[-2].transpose())
+
+        # go through each remaining layers and calculate the remaining weight and bias derivatives
+        for lay in range(2, len(self.biases) + 1):
+            # find the derivatives of the zActivations for the current layer
+            # this is the next component in the chain rule, the activation derivatives of the zActivations
+            dActivations = derivActivation(Settings.ACTIVATION_FUNC, czActivations[-lay])
+            # dActivations = derivActivation(Settings.ACTIVATION_FUNC, czActivations[-lay])
+
+            # multiply the activation derivative values with the corresponding weights
+            #   and derivatives from the previous layer
+            # this takes the dot product of the weights going into the current layer,
+            #   which is why self.weights is indexed at [-lay + 1], rather than [-lay]
+            # it is then multiplied by the values in dSigs for the other part of the derivative
+            baseDerivatives = calc_multDot(self.weights[-lay + 1].transpose(), baseDerivatives, dActivations)
+
+            # set the base derivatives in the bias list
+            cbGradient[-lay] = baseDerivatives
+
+            # calculate and set the derivatives for the weight matrix
+            # using the same calculation as outside the loop with np.outer,
+            #   determine next part of the derivatives for the weight matrix
+            #   based on the baseDerivatives, and the activations of the previous layer
+            cwGradient[-lay] = np.outer(baseDerivatives, cActivations[-lay - 1].transpose())
+
+        # return all the of the gradient data
+        return cwGradient, cbGradient, wGradient, bGradient
 
     def train(self, data, shuffle=False, split=1, times=1, func=None, learnSchedule=0):
         """
@@ -152,9 +362,13 @@ class Convolution:
                 random.shuffle(data)
             # go through each subset of data of data
             for s, dat in enumerate(data):
-                # TODO modify this to work for convolution
                 # variable to keep track of all the gradient values
-                gradientTotal = None
+                gradientTotal = [
+                    [np.zeros(w.shape) for w in self.weights],
+                    [np.zeros(b.shape) for b in self.biases],
+                    [np.zeros(w.shape) for w in self.decider.weights],
+                    [np.zeros(b.shape) for b in self.decider.biases]
+                ]
 
                 # go through each piece of data in the subset
                 for d in dat:
@@ -166,12 +380,12 @@ class Convolution:
 
                     # add the gradient from the current backpropagation call to the total gradient
                     # accounting for averages and learning rate
-                    # for i in range(len(gradient[0])):
-                        # gradientTotal[0][i] += gradient[0][i] * rate * Settings.NET_PROPAGATION_RATE / len(dat)
-                        # gradientTotal[1][i] += gradient[1][i] * rate * Settings.NET_PROPAGATION_RATE / len(dat)
+                    for j in range(4):
+                        for i in range(len(gradient[j])):
+                            gradientTotal[j][i] += gradient[j][i] * rate * Settings.NET_PROPAGATION_RATE / len(dat)
 
                 # apply the final gradient
-                self.applyGradient(gradientTotal)
+                self.applyGradient(gradientTotal, len(data))
 
                 # call the extra function
                 if func is not None:
