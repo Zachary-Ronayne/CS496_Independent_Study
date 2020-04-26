@@ -131,6 +131,11 @@ class Convolution:
 
             self.decider.biases[i] = self.decider.biases[i] - gradient[3][i] * factor
 
+        # apply the gradient for the filters
+        for i, filters in enumerate(self.layers):
+            for j, fil in enumerate(filters):
+                fil.weights += gradient[4][i][j]
+
     def backpropagate(self, inputs, expected, drop=None):
         """
         Calculate the gradient for changing the weights and biases.
@@ -143,10 +148,6 @@ class Convolution:
             The second entry is a list of all the bias changes
         """
         '''
-        
-        potentially useful links:
-        https://becominghuman.ai/back-propagation-in-convolutional-neural-networks-intuition-and-code-714ef1c38199
-        https://towardsdatascience.com/backpropagation-in-a-convolutional-layer-24c8d64d8509
         
         Return a thing for the weights and biases between layers
         Also need a matrix for each of the filters
@@ -187,6 +188,9 @@ class Convolution:
             czActivations.append(current)
             cActivations.append([activation(Settings.ACTIVATION_FUNC, c) for c in current])
 
+        # save the array versions
+        arrZActivations = czActivations
+        arrActivations = cActivations
         # convert the activations into single values
         czActivations = [np.array([np.sum(a) for a in c]) for c in czActivations]
         cActivations = [np.array([np.sum(a) for a in c]) for c in cActivations]
@@ -284,9 +288,16 @@ class Convolution:
 
         #
         # Calculate the derivatives for the convolutional network
-        # TODO need to calculate derivatives for the filters also, somehow
+        #
+        # and
+        #
+        # Calculate the filter gradient
         #
 
+        # create the filter gradient base
+        filterGradient = [[np.zeros(f.weights.shape) for f in layer] for layer in self.layers]
+
+        # calculate each gradient
         # set up lists for the weight and bias gradients
         # both of these create a numpy array of the same size as the weights and biases for that layer
         cwGradient = [np.zeros(w.shape) for w in self.weights]
@@ -329,8 +340,11 @@ class Convolution:
             #   based on the baseDerivatives, and the activations of the previous layer
             cwGradient[-lay] = np.outer(baseDerivatives, cActivations[-lay - 1].transpose())
 
+            # calculate the derivatives for the filters
+            # TODO
+
         # return all the of the gradient data
-        return cwGradient, cbGradient, wGradient, bGradient
+        return cwGradient, cbGradient, wGradient, bGradient, filterGradient
 
     def train(self, data, shuffle=False, split=1, times=1, func=None, learnSchedule=0):
         """
@@ -367,7 +381,8 @@ class Convolution:
                     [np.zeros(w.shape) for w in self.weights],
                     [np.zeros(b.shape) for b in self.biases],
                     [np.zeros(w.shape) for w in self.decider.weights],
-                    [np.zeros(b.shape) for b in self.decider.biases]
+                    [np.zeros(b.shape) for b in self.decider.biases],
+                    [[np.zeros(f.weights.shape) for f in layer] for layer in self.layers]
                 ]
 
                 # go through each piece of data in the subset
@@ -383,6 +398,11 @@ class Convolution:
                     for j in range(4):
                         for i in range(len(gradient[j])):
                             gradientTotal[j][i] += gradient[j][i] * rate * Settings.NET_PROPAGATION_RATE / len(dat)
+
+                    # add the filter portions to the gradient
+                    for i, filters in enumerate(gradient[4]):
+                        for j, fil in enumerate(filters):
+                            gradientTotal[4][i][j] += fil
 
                 # apply the final gradient
                 self.applyGradient(gradientTotal, len(data))
